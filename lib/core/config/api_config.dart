@@ -19,7 +19,7 @@ class ApiConfig {
   static final ValueNotifier<String> plataformaActivaNotifier =
       ValueNotifier<String>(plataformaPorDefecto);
 
-  static String get plataformaPorDefecto => kIsWeb ? 'WEB' : 'MOVIL';
+  static String get plataformaPorDefecto => 'MOVIL';
 
   static String get plataformaActual => plataformaActivaNotifier.value;
 
