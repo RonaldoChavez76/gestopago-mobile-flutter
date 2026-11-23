@@ -14,6 +14,16 @@ class _FakeTransactionService extends TransactionService {
       : super(apiClient: ApiClient(sessionStorage: SecureSessionStorage()));
 
   @override
+  Future<SolicitudOtpCompraResultado> solicitarReto2FAParaCompra(String numeroCuenta) async {
+    return const SolicitudOtpCompraResultado(
+      codigoOtp: '654321',
+      correoEnviado: true,
+      correoDestinoEnmascarado: 'an***a@correo.com',
+      mensaje: 'OK',
+    );
+  }
+
+  @override
   Future<String> solicitarCodigo2FAParaCompra(String numeroCuenta) async {
     return '654321';
   }
@@ -106,6 +116,20 @@ void main() {
     );
 
     final btnContinuar = find.text('Continuar a Confirmación');
+    await tester.ensureVisible(btnContinuar);
+    await tester.pumpAndSettle();
+    await tester.tap(btnContinuar);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Solicita e ingresa el código 2FA de 6 dígitos.'), findsOneWidget);
+    expect(find.text('Confirmar Intención de Compra'), findsNothing);
+
+    final btnGenerarOtp = find.text('Generar OTP');
+    await tester.ensureVisible(btnGenerarOtp);
+    await tester.pumpAndSettle();
+    await tester.tap(btnGenerarOtp);
+    await tester.pumpAndSettle();
+
     await tester.ensureVisible(btnContinuar);
     await tester.pumpAndSettle();
     await tester.tap(btnContinuar);

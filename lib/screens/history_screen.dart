@@ -146,7 +146,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   controller: _filtroController,
                   onChanged: (val) => setState(() => _busqueda = val.trim()),
                   decoration: InputDecoration(
-                    hintText: 'Buscar por producto, UPC, idTx, autorización o teléfono...',
+                    hintText: 'Buscar producto, UPC o teléfono...',
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _busqueda.isEmpty
                         ? null

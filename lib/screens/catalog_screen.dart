@@ -245,7 +245,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   controller: _busquedaController,
                   onChanged: (val) => setState(() => _filtroBusqueda = val.trim()),
                   decoration: InputDecoration(
-                    hintText: 'Buscar por producto, compañía o código (ej. Telcel, CFE, 582)...',
+                    hintText: 'Buscar producto, marca o ID...',
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _filtroBusqueda.isEmpty
                         ? null
