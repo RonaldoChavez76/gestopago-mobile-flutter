@@ -90,8 +90,12 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
       });
       _iniciarTemporizador();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nuevo código OTP de 6 dígitos generado en el servidor.'),
+        SnackBar(
+          content: Text(
+            nuevoReto.correoEnviado == true
+                ? 'Nuevo código OTP enviado a ${nuevoReto.correoDestinoEnmascarado ?? nuevoReto.correo}.'
+                : 'Nuevo código OTP de 6 dígitos generado en el servidor.',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -181,6 +185,36 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                               ),
                         ),
                         const SizedBox(height: 20),
+                        if (_currentChallenge.correoEnviado == true) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.mark_email_read_outlined,
+                                  color: Colors.green.shade700,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Enviamos tu código OTP de 6 dígitos a ${_currentChallenge.correoDestinoEnmascarado ?? _currentChallenge.correo}. Revisa tu bandeja de entrada o carpeta de spam.',
+                                    style: TextStyle(
+                                      color: Colors.green.shade900,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                         if (_currentChallenge.codigoOtp.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.all(14),

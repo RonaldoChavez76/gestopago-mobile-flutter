@@ -6,6 +6,7 @@ import '../state/session_controller.dart';
 import 'catalog_screen.dart';
 import 'history_screen.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 import 'purchase_screen.dart';
 
 class HomeShellScreen extends StatefulWidget {
@@ -100,6 +101,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             sessionController: widget.sessionController,
             onIrACatalogo: () => setState(() => _selectedIndex = 1),
             onIrAHistorial: () => setState(() => _selectedIndex = 2),
+            onIrAPerfil: () => setState(() => _selectedIndex = 3),
           ),
           CatalogScreen(
             sessionController: widget.sessionController,
@@ -118,6 +120,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             },
           ),
           HistoryScreen(
+            sessionController: widget.sessionController,
+          ),
+          ProfileScreen(
             sessionController: widget.sessionController,
           ),
         ];
@@ -214,6 +219,11 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                       selectedIcon: Icon(Icons.receipt_long),
                       label: Text('Historial Exitoso'),
                     ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.manage_accounts_outlined),
+                      selectedIcon: Icon(Icons.manage_accounts),
+                      label: Text('Mi Perfil'),
+                    ),
                   ],
                 ),
               if (esPantallaAncha) const VerticalDivider(width: 1),
@@ -244,6 +254,11 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                       selectedIcon: Icon(Icons.receipt_long),
                       label: 'Historial',
                     ),
+                    NavigationDestination(
+                      icon: Icon(Icons.manage_accounts_outlined),
+                      selectedIcon: Icon(Icons.manage_accounts),
+                      label: 'Perfil',
+                    ),
                   ],
                 ),
         );
@@ -257,11 +272,13 @@ class _PanelResumenSesion extends StatelessWidget {
     required this.sessionController,
     required this.onIrACatalogo,
     required this.onIrAHistorial,
+    required this.onIrAPerfil,
   });
 
   final SessionController sessionController;
   final VoidCallback onIrACatalogo;
   final VoidCallback onIrAHistorial;
+  final VoidCallback onIrAPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -378,6 +395,11 @@ class _PanelResumenSesion extends StatelessWidget {
                             onPressed: onIrAHistorial,
                             icon: const Icon(Icons.receipt_long_outlined),
                             label: const Text('Consultar Historial de Compras'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: onIrAPerfil,
+                            icon: const Icon(Icons.manage_accounts_outlined),
+                            label: const Text('Editar Perfil y Cuenta'),
                           ),
                         ],
                       ),

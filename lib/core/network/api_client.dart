@@ -85,16 +85,69 @@ class ApiClient {
     Map<String, dynamic>? body,
     bool requiereAuth = true,
     Duration timeout = const Duration(seconds: 35),
+  }) {
+    return _enviarJson(
+      'POST',
+      path,
+      body: body,
+      requiereAuth: requiereAuth,
+      timeout: timeout,
+    );
+  }
+
+  Future<Map<String, dynamic>> putJson(
+    String path, {
+    Map<String, dynamic>? body,
+    bool requiereAuth = true,
+    Duration timeout = const Duration(seconds: 35),
+  }) {
+    return _enviarJson(
+      'PUT',
+      path,
+      body: body,
+      requiereAuth: requiereAuth,
+      timeout: timeout,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    Map<String, dynamic>? body,
+    bool requiereAuth = true,
+    Duration timeout = const Duration(seconds: 35),
+  }) {
+    return _enviarJson(
+      'DELETE',
+      path,
+      body: body,
+      requiereAuth: requiereAuth,
+      timeout: timeout,
+    );
+  }
+
+  Future<Map<String, dynamic>> _enviarJson(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    bool requiereAuth = true,
+    Duration timeout = const Duration(seconds: 35),
   }) async {
     final uri = ApiConfig.endpoint(path);
+    final headers = _construirHeaders(incluirAuth: requiereAuth);
+    final encodedBody = body != null ? jsonEncode(body) : null;
+
     try {
-      final response = await _httpClient
-          .post(
-            uri,
-            headers: _construirHeaders(incluirAuth: requiereAuth),
-            body: body != null ? jsonEncode(body) : null,
-          )
-          .timeout(timeout);
+      final http.Response response;
+      switch (method) {
+        case 'PUT':
+          response = await _httpClient.put(uri, headers: headers, body: encodedBody).timeout(timeout);
+          break;
+        case 'DELETE':
+          response = await _httpClient.delete(uri, headers: headers, body: encodedBody).timeout(timeout);
+          break;
+        default:
+          response = await _httpClient.post(uri, headers: headers, body: encodedBody).timeout(timeout);
+      }
       return _procesarRespuesta(response, notificarExpiracion: requiereAuth);
     } on TimeoutException {
       throw const ApiException(
@@ -165,4 +218,3 @@ class ApiClient {
     throw ApiException(statusCode: status, message: mensaje);
   }
 }
-

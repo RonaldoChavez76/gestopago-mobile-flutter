@@ -39,6 +39,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   bool _solicitandoOtp = false;
   bool _simularProveedor = true;
   String? _otpGeneradoServidor;
+  bool _correoEnviadoOtp = false;
+  String? _correoDestinoOtp;
   String? _errorFormulario;
   PurchaseTransactionResult? _resultadoOperacion;
 
@@ -81,11 +83,17 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       _errorFormulario = null;
     });
     try {
-      final codigo = await _service.solicitarCodigo2FAParaCompra(cuenta);
+      final resultado = await _service.solicitarReto2FAParaCompra(cuenta);
       if (!mounted) return;
       setState(() {
-        _otpGeneradoServidor = codigo;
-        _codigo2faController.text = codigo;
+        _correoEnviadoOtp = resultado.correoEnviado;
+        _correoDestinoOtp = resultado.correoDestinoEnmascarado;
+        if (resultado.codigoOtp.trim().isNotEmpty) {
+          _otpGeneradoServidor = resultado.codigoOtp;
+          _codigo2faController.text = resultado.codigoOtp;
+        } else {
+          _otpGeneradoServidor = null;
+        }
         _solicitandoOtp = false;
       });
     } on ApiException catch (e) {
@@ -375,7 +383,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   ),
                 ],
               ),
-              if (_otpGeneradoServidor != null) ...[
+              if (_otpGeneradoServidor != null && _otpGeneradoServidor!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -388,6 +396,25 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (_correoEnviadoOtp) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.mark_email_read_outlined, size: 16, color: Colors.green.shade700),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Código de autorización enviado al correo ${_correoDestinoOtp ?? widget.sessionController.sesionActual?.correo ?? 'registrado'}.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green.shade800,
                         ),
                       ),
                     ),

@@ -6,17 +6,22 @@ import '../models/auth_models.dart';
 import '../services/auth_service.dart';
 
 class SessionController extends ChangeNotifier {
-  SessionController() {
-    _storage = SecureSessionStorage();
-    _apiClient = ApiClient(
-      sessionStorage: _storage,
-      onUnauthorizedSession: (motivo) {
-        _storage.limpiarSesion();
-        _mensajeAlertaSesion = motivo;
-        notifyListeners();
-      },
-    );
-    _authService = AuthService(apiClient: _apiClient);
+  SessionController({
+    SecureSessionStorage? storage,
+    ApiClient? apiClient,
+    AuthService? authService,
+  }) {
+    _storage = storage ?? SecureSessionStorage();
+    _apiClient = apiClient ??
+        ApiClient(
+          sessionStorage: _storage,
+          onUnauthorizedSession: (motivo) {
+            _storage.limpiarSesion();
+            _mensajeAlertaSesion = motivo;
+            notifyListeners();
+          },
+        );
+    _authService = authService ?? AuthService(apiClient: _apiClient);
   }
 
   late final SecureSessionStorage _storage;
@@ -46,6 +51,27 @@ class SessionController extends ChangeNotifier {
       _storage.guardarSesion(actual.copyWith(saldoCuenta: nuevoSaldo));
       notifyListeners();
     }
+  }
+
+  void actualizarPerfilLocal({String? nombreCliente, String? correo}) {
+    final actual = sesionActual;
+    if (actual == null) return;
+    _storage.guardarSesion(
+      actual.copyWith(
+        nombreCliente: (nombreCliente != null && nombreCliente.trim().isNotEmpty)
+            ? nombreCliente.trim()
+            : null,
+        correo: (correo != null && correo.trim().isNotEmpty) ? correo.trim() : null,
+      ),
+    );
+    notifyListeners();
+  }
+
+  void cerrarSesionTrasBaja() {
+    _storage.limpiarSesion();
+    _mensajeAlertaSesion =
+        'Tu cuenta fue dada de baja correctamente y tu sesión ha sido cerrada.';
+    notifyListeners();
   }
 
   Future<Login2faChallenge> iniciarPreLogin({
