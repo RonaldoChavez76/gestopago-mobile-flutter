@@ -62,4 +62,12 @@ class ClienteService {
     );
     return (response['message'] ?? 'Cliente dado de baja lógicamente.').toString();
   }
+
+  Future<String> reactivarCliente(int clienteId) async {
+    final response = await apiClient.putJson(
+      '/clientes/reactivar',
+      body: {'clienteId': clienteId},
+    );
+    return (response['message'] ?? 'Cliente reactivado correctamente.').toString();
+  }
 }

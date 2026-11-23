@@ -74,6 +74,13 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void marcarCuentaActivaLocal(bool activa) {
+    final actual = sesionActual;
+    if (actual == null) return;
+    _storage.guardarSesion(actual.copyWith(cuentaActiva: activa));
+    notifyListeners();
+  }
+
   Future<Login2faChallenge> iniciarPreLogin({
     required String correo,
     required String password,

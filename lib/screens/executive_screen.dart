@@ -317,6 +317,13 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
     try {
       final detalle = await _clienteService.consultarPerfil(clienteId);
       if (!mounted) return;
+      if (!detalle.activo) {
+        setState(() {
+          _errorGlobal =
+              'El cliente #${detalle.id} está dado de baja. Reactívalo primero antes de editar sus datos.';
+        });
+        return;
+      }
       final actualizado = await Navigator.of(context).push<ClientePerfil>(
         MaterialPageRoute(
           builder: (_) => _ExecutiveClientEditScreen(
@@ -338,6 +345,48 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _errorGlobal = 'No fue posible cargar el expediente del cliente.');
+    }
+  }
+
+  Future<void> _confirmarReactivarCliente(ClientePerfil cliente) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Reactivar Cliente #${cliente.id}'),
+        content: Text(
+          'Se reactivará al cliente ${cliente.nombreCompleto}, su usuario de acceso y sus cuentas bancarias inactivas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.restore_outlined),
+            label: const Text('Reactivar Cliente'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    setState(() => _errorGlobal = null);
+    try {
+      await _clienteService.reactivarCliente(cliente.id);
+      if (!mounted) return;
+      setState(() {
+        _avisoGlobal =
+            'Cliente #${cliente.id} (${cliente.nombreCompleto}) reactivado correctamente.';
+      });
+      await _buscarClientes(page: _cliPage);
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 || !mounted) return;
+      setState(() => _errorGlobal = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _errorGlobal = 'No fue posible reactivar al cliente.');
     }
   }
 
@@ -754,11 +803,12 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        OutlinedButton.icon(
-                          onPressed: () => _abrirEdicionCliente(p.id),
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Editar'),
-                        ),
+                        if (p.activo)
+                          OutlinedButton.icon(
+                            onPressed: () => _abrirEdicionCliente(p.id),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Editar'),
+                          ),
                         OutlinedButton.icon(
                           onPressed: () => _irACuentasDeCliente(p.id),
                           icon: const Icon(Icons.credit_card_outlined, size: 18),
@@ -774,6 +824,12 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
                             onPressed: () => _confirmarBajaCliente(p),
                             icon: const Icon(Icons.delete_outline, size: 18),
                             label: const Text('Dar de baja'),
+                          )
+                        else
+                          FilledButton.tonalIcon(
+                            onPressed: () => _confirmarReactivarCliente(p),
+                            icon: const Icon(Icons.restore_outlined, size: 18),
+                            label: const Text('Reactivar'),
                           ),
                       ],
                     ),

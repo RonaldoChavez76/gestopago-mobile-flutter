@@ -115,6 +115,8 @@ class AuthService {
         rol: data['rol'] != null && data['rol'].toString().trim().isNotEmpty
             ? UserSession.normalizarRol(data['rol'])
             : sesionActual.rol,
+        cuentaActiva:
+            data['cuentaActiva'] is bool ? data['cuentaActiva'] as bool : sesionActual.cuentaActiva,
         usuarioId: (data['usuarioId'] as num?)?.toInt() ?? sesionActual.usuarioId,
         clienteId: (data['clienteId'] as num?)?.toInt() ?? sesionActual.clienteId,
         saldoCuenta: (data['saldoCuenta'] as num?)?.toDouble() ?? sesionActual.saldoCuenta,

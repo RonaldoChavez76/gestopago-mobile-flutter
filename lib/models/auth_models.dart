@@ -72,6 +72,7 @@ class UserSession {
     required this.plataforma,
     required this.correo,
     this.rol = 'CLIENTE',
+    this.cuentaActiva = true,
     this.expiresAt,
     this.sessionId,
     this.usuarioId,
@@ -88,6 +89,7 @@ class UserSession {
   final String? sessionId;
   final String plataforma;
   final String rol;
+  final bool cuentaActiva;
   final int? usuarioId;
   final int? clienteId;
   final String? nombreCliente;
@@ -109,6 +111,7 @@ class UserSession {
 
   UserSession copyWith({
     String? rol,
+    bool? cuentaActiva,
     int? usuarioId,
     int? clienteId,
     double? saldoCuenta,
@@ -124,6 +127,7 @@ class UserSession {
       sessionId: sessionId,
       plataforma: plataforma,
       rol: rol ?? this.rol,
+      cuentaActiva: cuentaActiva ?? this.cuentaActiva,
       usuarioId: usuarioId ?? this.usuarioId,
       clienteId: clienteId ?? this.clienteId,
       nombreCliente: nombreCliente ?? this.nombreCliente,
@@ -146,6 +150,7 @@ class UserSession {
       sessionId: json['sessionId']?.toString(),
       plataforma: (json['plataforma'] ?? 'WEB').toString(),
       rol: normalizarRol(json['rol']),
+      cuentaActiva: json['cuentaActiva'] is bool ? json['cuentaActiva'] as bool : true,
       usuarioId: (json['usuarioId'] as num?)?.toInt(),
       clienteId: (json['clienteId'] as num?)?.toInt(),
       nombreCliente: json['nombreCliente']?.toString(),
@@ -163,6 +168,7 @@ class UserSession {
       'expiresAt': expiresAt?.toIso8601String(),
       'sessionId': sessionId,
       'rol': rol,
+      'cuentaActiva': cuentaActiva,
       'usuarioId': usuarioId,
       'plataforma': plataforma,
       'clienteId': clienteId,
