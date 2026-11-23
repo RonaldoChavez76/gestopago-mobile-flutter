@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/network/api_client.dart';
+import '../services/cliente_service.dart';
 import '../state/session_controller.dart';
 import 'catalog_screen.dart';
 import 'executive_screen.dart';
@@ -97,6 +99,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
         final esPantallaAncha = constraints.maxWidth >= 860;
         final colorScheme = Theme.of(context).colorScheme;
         final esEjecutivo = sesion.esEjecutivo;
+        final cuentaActiva = sesion.cuentaActiva;
 
         final paginas = <Widget>[
           _PanelResumenSesion(
@@ -154,24 +157,34 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
+                    color: cuentaActiva
+                        ? colorScheme.primaryContainer
+                        : const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        sesion.plataforma == 'WEB' ? Icons.computer_rounded : Icons.smartphone_rounded,
+                        cuentaActiva
+                            ? (sesion.plataforma == 'WEB'
+                                ? Icons.computer_rounded
+                                : Icons.smartphone_rounded)
+                            : Icons.lock_outline,
                         size: 15,
-                        color: colorScheme.onPrimaryContainer,
+                        color: cuentaActiva
+                            ? colorScheme.onPrimaryContainer
+                            : const Color(0xFF991B1B),
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'Sesión ${sesion.plataforma}',
+                        cuentaActiva ? 'Sesión ${sesion.plataforma}' : 'Cuenta Inactiva',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimaryContainer,
+                          color: cuentaActiva
+                              ? colorScheme.onPrimaryContainer
+                              : const Color(0xFF991B1B),
                         ),
                       ),
                     ],
@@ -206,7 +219,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
           ),
           body: Row(
             children: [
-              if (esPantallaAncha)
+              if (esPantallaAncha && cuentaActiva)
                 NavigationRail(
                   extended: constraints.maxWidth >= 1120,
                   selectedIndex: indiceActual,
@@ -243,11 +256,18 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                       ),
                   ],
                 ),
-              if (esPantallaAncha) const VerticalDivider(width: 1),
-              Expanded(child: paginas[indiceActual]),
+              if (esPantallaAncha && cuentaActiva) const VerticalDivider(width: 1),
+              Expanded(
+                child: cuentaActiva
+                    ? paginas[indiceActual]
+                    : _PanelCuentaInactiva(
+                        sessionController: widget.sessionController,
+                        onCerrarSesion: _confirmarCierreSesion,
+                      ),
+              ),
             ],
           ),
-          bottomNavigationBar: esPantallaAncha
+          bottomNavigationBar: (!cuentaActiva || esPantallaAncha)
               ? null
               : NavigationBar(
                   selectedIndex: indiceActual,
@@ -472,6 +492,175 @@ class _PanelResumenSesion extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PanelCuentaInactiva extends StatefulWidget {
+  const _PanelCuentaInactiva({
+    required this.sessionController,
+    required this.onCerrarSesion,
+  });
+
+  final SessionController sessionController;
+  final VoidCallback onCerrarSesion;
+
+  @override
+  State<_PanelCuentaInactiva> createState() => _PanelCuentaInactivaState();
+}
+
+class _PanelCuentaInactivaState extends State<_PanelCuentaInactiva> {
+  final _confirmacionCtrl = TextEditingController();
+  bool _reactivando = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _confirmacionCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _reactivarCuenta() async {
+    if (_confirmacionCtrl.text.trim().toUpperCase() != 'ACTIVAR') {
+      setState(() => _error = 'Escribe ACTIVAR para confirmar la reactivación.');
+      return;
+    }
+
+    setState(() {
+      _reactivando = true;
+      _error = null;
+    });
+    try {
+      var clienteId = widget.sessionController.sesionActual?.clienteId;
+      if (clienteId == null) {
+        await widget.sessionController.verificarVigenciaSesion();
+        clienteId = widget.sessionController.sesionActual?.clienteId;
+      }
+      if (clienteId == null) {
+        if (!mounted) return;
+        setState(() => _error = 'No se identificó el cliente asociado.');
+        return;
+      }
+
+      final clienteService = ClienteService(apiClient: widget.sessionController.apiClient);
+      await clienteService.reactivarCliente(clienteId);
+      widget.sessionController.marcarCuentaActivaLocal(true);
+      await widget.sessionController.verificarVigenciaSesion();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'No fue posible reactivar tu cuenta en este momento.');
+    } finally {
+      if (mounted) {
+        setState(() => _reactivando = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sesion = widget.sessionController.sesionActual;
+    if (sesion == null) {
+      return const SizedBox.shrink();
+    }
+
+    final habilitar = _confirmacionCtrl.text.trim().toUpperCase() == 'ACTIVAR' && !_reactivando;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Card(
+            elevation: 0,
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.lock_person_outlined, size: 32, color: Color(0xFFB45309)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tu cuenta está dada de baja temporalmente',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Mientras permanezca inactiva no puedes realizar compras, movimientos ni editar tus datos o contraseña.',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Titular: ${sesion.nombreCliente ?? sesion.correo}'),
+                        Text('Correo: ${sesion.correo}'),
+                        if (sesion.numeroCuenta != null) Text('Cuenta: ${sesion.numeroCuenta}'),
+                      ],
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Color(0xFF991B1B)),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _confirmacionCtrl,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Escribe ACTIVAR para reactivar tu cuenta',
+                      hintText: 'ACTIVAR',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: habilitar ? _reactivarCuenta : null,
+                    icon: const Icon(Icons.restore_outlined),
+                    label: Text(_reactivando ? 'Reactivando...' : 'Reactivar mi cuenta'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: _reactivando ? null : widget.onCerrarSesion,
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text('Cerrar sesión'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
