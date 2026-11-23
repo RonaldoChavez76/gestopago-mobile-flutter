@@ -6,6 +6,16 @@ class ClienteService {
 
   final ApiClient apiClient;
 
+  Future<RegistroClienteResultado> registrarCliente(RegistroClienteSolicitud solicitud) async {
+    final response = await apiClient.postJson(
+      '/clientes',
+      requiereAuth: false,
+      body: solicitud.toRequestJson(),
+    );
+    final data = response['data'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    return RegistroClienteResultado.fromJson(data);
+  }
+
   Future<ClientePerfil> consultarPerfil(int clienteId) async {
     final response = await apiClient.postJson(
       '/clientes/consulta',

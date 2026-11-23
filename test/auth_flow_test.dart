@@ -4,19 +4,20 @@ import 'package:decimo_cuatri/models/auth_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Renderiza pantalla de Login y permite autocompletar credenciales de prueba', (tester) async {
+  testWidgets('Renderiza Login limpio sin credenciales precargadas y navega a registro', (tester) async {
     await tester.pumpWidget(const AuthShellApp());
 
     expect(find.text('Bienvenido a GestoPago'), findsOneWidget);
     expect(find.text('Iniciar Sesión con 2FA'), findsOneWidget);
+    expect(find.text('Cargar credenciales de prueba (Ana)'), findsNothing);
 
-    final botonPrueba = find.text('Cargar credenciales de prueba (Ana)');
-    await tester.ensureVisible(botonPrueba);
+    final botonRegistro = find.text('¿No tienes cuenta? Regístrate aquí');
+    await tester.ensureVisible(botonRegistro);
     await tester.pumpAndSettle();
-    await tester.tap(botonPrueba);
-    await tester.pump();
+    await tester.tap(botonRegistro);
+    await tester.pumpAndSettle();
 
-    expect(find.text('ana.lopez.prueba@example.com'), findsAtLeastNWidgets(1));
+    expect(find.text('Registro de Nuevo Cliente'), findsOneWidget);
   });
 
   test('Parsea correctamente ConflictoSesion (409) y UserSession', () {
@@ -49,4 +50,3 @@ void main() {
     expect(storage.currentSession?.plataforma, 'WEB');
   });
 }
-

@@ -21,11 +21,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static final RegExp _passwordRegex = RegExp(
-    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$',
-  );
-  static final RegExp _emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-
   late final ClienteService _clienteService;
 
   bool _cargandoPerfil = true;
@@ -210,57 +205,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String? _validarPerfil(ClientePerfil datos) {
-    if (datos.primerNombre.trim().length < 2) {
-      return 'El primer nombre debe tener al menos 2 caracteres.';
-    }
-    if (datos.apellidoPaterno.trim().length < 2) {
-      return 'El apellido paterno debe tener al menos 2 caracteres.';
-    }
-    if (datos.apellidoMaterno.trim().length < 2) {
-      return 'El apellido materno debe tener al menos 2 caracteres.';
-    }
-    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datos.fechaNacimiento.trim())) {
-      return 'La fecha de nacimiento debe usar el formato AAAA-MM-DD.';
-    }
-    if (!_emailRegex.hasMatch(datos.correo.trim())) {
-      return 'Ingresa un correo electrónico válido.';
-    }
-    if (!RegExp(r'^\d{10}$').hasMatch(datos.telefonoMovil.trim())) {
-      return 'El teléfono móvil debe tener exactamente 10 dígitos.';
-    }
-    final alt = datos.telefonoAlternativo.trim();
-    if (alt.isNotEmpty && !RegExp(r'^\d{10}$').hasMatch(alt)) {
-      return 'El teléfono alternativo debe tener 10 dígitos o permanecer vacío.';
-    }
-    if (datos.ocupacion.trim().isEmpty || datos.empresa.trim().isEmpty) {
-      return 'Ocupación y empresa son obligatorios.';
-    }
-    final ingreso = double.tryParse(datos.ingresoMensual.trim());
-    if (ingreso == null || ingreso <= 0) {
-      return 'El ingreso mensual debe ser mayor a \$0.00.';
-    }
-    final dom = datos.domicilio;
-    if (dom.calle.trim().isEmpty ||
-        dom.numeroExterior.trim().isEmpty ||
-        dom.colonia.trim().isEmpty ||
-        dom.municipio.trim().isEmpty ||
-        dom.estado.trim().isEmpty ||
-        dom.pais.trim().isEmpty) {
-      return 'Completa los campos obligatorios del domicilio.';
-    }
-    if (!RegExp(r'^\d{5}$').hasMatch(dom.codigoPostal.trim())) {
-      return 'El código postal debe tener exactamente 5 dígitos.';
-    }
-    return null;
-  }
-
   Future<void> _guardarPerfil() async {
     final base = _perfil;
     if (base == null) return;
 
     final candidato = _construirPerfilDesdeControllers(base);
-    final err = _validarPerfil(candidato);
+    final err = ClienteValidacion.validarDatosBase(candidato);
     if (err != null) {
       setState(() {
         _errorPerfil = err;
@@ -321,7 +271,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _errorPassword = 'Ingresa tu contraseña actual.');
       return;
     }
-    if (!_passwordRegex.hasMatch(nueva)) {
+    if (!ClienteValidacion.passwordRegex.hasMatch(nueva)) {
       setState(
         () => _errorPassword =
             'La nueva contraseña requiere 8+ caracteres con mayúscula, minúscula, número y símbolo.',
