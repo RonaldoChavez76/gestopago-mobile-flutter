@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../state/session_controller.dart';
 import 'catalog_screen.dart';
+import 'executive_screen.dart';
 import 'history_screen.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
@@ -95,6 +96,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
       builder: (context, constraints) {
         final esPantallaAncha = constraints.maxWidth >= 860;
         final colorScheme = Theme.of(context).colorScheme;
+        final esEjecutivo = sesion.esEjecutivo;
 
         final paginas = <Widget>[
           _PanelResumenSesion(
@@ -102,6 +104,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             onIrACatalogo: () => setState(() => _selectedIndex = 1),
             onIrAHistorial: () => setState(() => _selectedIndex = 2),
             onIrAPerfil: () => setState(() => _selectedIndex = 3),
+            onIrAEjecutivo: esEjecutivo ? () => setState(() => _selectedIndex = 4) : null,
           ),
           CatalogScreen(
             sessionController: widget.sessionController,
@@ -125,7 +128,13 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
           ProfileScreen(
             sessionController: widget.sessionController,
           ),
+          if (esEjecutivo)
+            ExecutiveScreen(
+              sessionController: widget.sessionController,
+            ),
         ];
+
+        final indiceActual = _selectedIndex >= paginas.length ? 0 : _selectedIndex;
 
         return Scaffold(
           appBar: AppBar(
@@ -200,67 +209,79 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
               if (esPantallaAncha)
                 NavigationRail(
                   extended: constraints.maxWidth >= 1120,
-                  selectedIndex: _selectedIndex,
+                  selectedIndex: indiceActual,
                   onDestinationSelected: (idx) {
                     setState(() => _selectedIndex = idx);
                     widget.sessionController.verificarVigenciaSesion();
                   },
-                  destinations: const [
-                    NavigationRailDestination(
+                  destinations: [
+                    const NavigationRailDestination(
                       icon: Icon(Icons.verified_user_outlined),
                       selectedIcon: Icon(Icons.verified_user),
                       label: Text('Mi Cuenta y Sesión'),
                     ),
-                    NavigationRailDestination(
+                    const NavigationRailDestination(
                       icon: Icon(Icons.storefront_outlined),
                       selectedIcon: Icon(Icons.storefront),
                       label: Text('Catálogo y Compras'),
                     ),
-                    NavigationRailDestination(
+                    const NavigationRailDestination(
                       icon: Icon(Icons.receipt_long_outlined),
                       selectedIcon: Icon(Icons.receipt_long),
                       label: Text('Historial Exitoso'),
                     ),
-                    NavigationRailDestination(
+                    const NavigationRailDestination(
                       icon: Icon(Icons.manage_accounts_outlined),
                       selectedIcon: Icon(Icons.manage_accounts),
                       label: Text('Mi Perfil'),
                     ),
+                    if (esEjecutivo)
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.admin_panel_settings_outlined),
+                        selectedIcon: Icon(Icons.admin_panel_settings),
+                        label: Text('Panel Ejecutivo'),
+                      ),
                   ],
                 ),
               if (esPantallaAncha) const VerticalDivider(width: 1),
-              Expanded(child: paginas[_selectedIndex]),
+              Expanded(child: paginas[indiceActual]),
             ],
           ),
           bottomNavigationBar: esPantallaAncha
               ? null
               : NavigationBar(
-                  selectedIndex: _selectedIndex,
+                  selectedIndex: indiceActual,
                   onDestinationSelected: (idx) {
                     setState(() => _selectedIndex = idx);
                     widget.sessionController.verificarVigenciaSesion();
                   },
-                  destinations: const [
-                    NavigationDestination(
+                  destinations: [
+                    const NavigationDestination(
                       icon: Icon(Icons.verified_user_outlined),
                       selectedIcon: Icon(Icons.verified_user),
                       label: 'Mi Sesión',
                     ),
-                    NavigationDestination(
+                    const NavigationDestination(
                       icon: Icon(Icons.storefront_outlined),
                       selectedIcon: Icon(Icons.storefront),
                       label: 'Catálogo',
                     ),
-                    NavigationDestination(
+                    const NavigationDestination(
                       icon: Icon(Icons.receipt_long_outlined),
                       selectedIcon: Icon(Icons.receipt_long),
                       label: 'Historial',
                     ),
-                    NavigationDestination(
+                    const NavigationDestination(
                       icon: Icon(Icons.manage_accounts_outlined),
                       selectedIcon: Icon(Icons.manage_accounts),
                       label: 'Perfil',
                     ),
+                    if (esEjecutivo)
+                      const NavigationDestination(
+                        icon: Icon(Icons.admin_panel_settings_outlined),
+                        selectedIcon: Icon(Icons.admin_panel_settings),
+                        label: 'Ejecutivo',
+                      ),
                   ],
                 ),
         );
@@ -275,12 +296,14 @@ class _PanelResumenSesion extends StatelessWidget {
     required this.onIrACatalogo,
     required this.onIrAHistorial,
     required this.onIrAPerfil,
+    this.onIrAEjecutivo,
   });
 
   final SessionController sessionController;
   final VoidCallback onIrACatalogo;
   final VoidCallback onIrAHistorial;
   final VoidCallback onIrAPerfil;
+  final VoidCallback? onIrAEjecutivo;
 
   @override
   Widget build(BuildContext context) {
@@ -315,20 +338,43 @@ class _PanelResumenSesion extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '2FA Verificado • ${sesion.plataforma}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '2FA Verificado • ${sesion.plataforma}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
                             ),
-                          ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: sesion.esEjecutivo
+                                    ? const Color(0xFFFDE68A)
+                                    : Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Rol: ${sesion.esEjecutivo ? 'EJECUTIVO' : 'CLIENTE'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: sesion.esEjecutivo ? const Color(0xFF78350F) : Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -413,6 +459,12 @@ class _PanelResumenSesion extends StatelessWidget {
                             icon: const Icon(Icons.manage_accounts_outlined),
                             label: const Text('Editar Perfil y Cuenta'),
                           ),
+                          if (onIrAEjecutivo != null)
+                            FilledButton.tonalIcon(
+                              onPressed: onIrAEjecutivo,
+                              icon: const Icon(Icons.admin_panel_settings_outlined),
+                              label: const Text('Abrir Panel Ejecutivo'),
+                            ),
                         ],
                       ),
                     ],

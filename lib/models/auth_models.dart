@@ -71,6 +71,7 @@ class UserSession {
     required this.expiresIn,
     required this.plataforma,
     required this.correo,
+    this.rol = 'CLIENTE',
     this.expiresAt,
     this.sessionId,
     this.usuarioId,
@@ -86,6 +87,7 @@ class UserSession {
   final DateTime? expiresAt;
   final String? sessionId;
   final String plataforma;
+  final String rol;
   final int? usuarioId;
   final int? clienteId;
   final String? nombreCliente;
@@ -93,12 +95,20 @@ class UserSession {
   final String? numeroCuenta;
   final double? saldoCuenta;
 
+  static String normalizarRol(dynamic valor) {
+    final limpio = (valor?.toString() ?? '').trim().toUpperCase();
+    return limpio == 'EJECUTIVO' ? 'EJECUTIVO' : 'CLIENTE';
+  }
+
+  bool get esEjecutivo => rol.trim().toUpperCase() == 'EJECUTIVO';
+
   bool get haExpiradoLocalmente {
     if (expiresAt == null) return false;
     return DateTime.now().toUtc().isAfter(expiresAt!);
   }
 
   UserSession copyWith({
+    String? rol,
     int? usuarioId,
     int? clienteId,
     double? saldoCuenta,
@@ -113,6 +123,7 @@ class UserSession {
       expiresAt: expiresAt,
       sessionId: sessionId,
       plataforma: plataforma,
+      rol: rol ?? this.rol,
       usuarioId: usuarioId ?? this.usuarioId,
       clienteId: clienteId ?? this.clienteId,
       nombreCliente: nombreCliente ?? this.nombreCliente,
@@ -134,6 +145,7 @@ class UserSession {
       expiresAt: parsedExpiresAt,
       sessionId: json['sessionId']?.toString(),
       plataforma: (json['plataforma'] ?? 'WEB').toString(),
+      rol: normalizarRol(json['rol']),
       usuarioId: (json['usuarioId'] as num?)?.toInt(),
       clienteId: (json['clienteId'] as num?)?.toInt(),
       nombreCliente: json['nombreCliente']?.toString(),
@@ -150,6 +162,7 @@ class UserSession {
       'expiresIn': expiresIn,
       'expiresAt': expiresAt?.toIso8601String(),
       'sessionId': sessionId,
+      'rol': rol,
       'usuarioId': usuarioId,
       'plataforma': plataforma,
       'clienteId': clienteId,

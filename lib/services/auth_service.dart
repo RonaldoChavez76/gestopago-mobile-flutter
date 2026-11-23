@@ -112,6 +112,9 @@ class AuthService {
       if (data == null) return sesionActual;
 
       return sesionActual.copyWith(
+        rol: data['rol'] != null && data['rol'].toString().trim().isNotEmpty
+            ? UserSession.normalizarRol(data['rol'])
+            : sesionActual.rol,
         usuarioId: (data['usuarioId'] as num?)?.toInt() ?? sesionActual.usuarioId,
         clienteId: (data['clienteId'] as num?)?.toInt() ?? sesionActual.clienteId,
         saldoCuenta: (data['saldoCuenta'] as num?)?.toDouble() ?? sesionActual.saldoCuenta,
