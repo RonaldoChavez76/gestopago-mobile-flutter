@@ -151,3 +151,154 @@ class ClientePerfil {
     };
   }
 }
+
+class RegistroClienteSolicitud {
+  const RegistroClienteSolicitud({
+    required this.perfil,
+    required this.password,
+  });
+
+  final ClientePerfil perfil;
+  final String password;
+
+  Map<String, dynamic> toRequestJson() {
+    return {
+      ...perfil.toActualizarRequestJson(),
+      'curp': perfil.curp.trim().toUpperCase(),
+      'rfc': perfil.rfc.trim().toUpperCase(),
+      'password': password,
+    };
+  }
+}
+
+class RegistroClienteResultado {
+  const RegistroClienteResultado({
+    required this.clienteId,
+    required this.usuarioId,
+    required this.cuentaId,
+    required this.numeroCuenta,
+    required this.correo,
+  });
+
+  final int clienteId;
+  final int usuarioId;
+  final int cuentaId;
+  final String numeroCuenta;
+  final String correo;
+
+  factory RegistroClienteResultado.fromJson(Map<String, dynamic> json) {
+    return RegistroClienteResultado(
+      clienteId: (json['clienteId'] as num?)?.toInt() ?? 0,
+      usuarioId: (json['usuarioId'] as num?)?.toInt() ?? 0,
+      cuentaId: (json['cuentaId'] as num?)?.toInt() ?? 0,
+      numeroCuenta: (json['numeroCuenta'] ?? '').toString(),
+      correo: (json['correo'] ?? '').toString(),
+    );
+  }
+}
+
+class ClienteValidacion {
+  ClienteValidacion._();
+
+  static final RegExp passwordRegex = RegExp(
+    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$',
+  );
+  static final RegExp emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+  static final RegExp curpRegex = RegExp(
+    r'^[A-Z][AEIOUX][A-Z]{2}[0-9]{6}[HM][A-Z]{5}[A-Z0-9][0-9]$',
+    caseSensitive: false,
+  );
+  static final RegExp rfcRegex = RegExp(
+    r'^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$',
+    caseSensitive: false,
+  );
+
+  static bool esMayorDeEdad(String fechaIso) {
+    final limpio = fechaIso.trim();
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(limpio)) {
+      return false;
+    }
+    final partes = limpio.split('-');
+    final anio = int.tryParse(partes[0]);
+    final mes = int.tryParse(partes[1]);
+    final dia = int.tryParse(partes[2]);
+    if (anio == null || mes == null || dia == null) return false;
+    final nacimiento = DateTime(anio, mes, dia);
+    final hoy = DateTime.now();
+    final limite = DateTime(hoy.year - 18, hoy.month, hoy.day);
+    return !nacimiento.isAfter(limite);
+  }
+
+  static String? validarDatosBase(ClientePerfil datos) {
+    if (datos.primerNombre.trim().length < 2) {
+      return 'El primer nombre debe tener al menos 2 caracteres.';
+    }
+    if (datos.segundoNombre.trim().isNotEmpty && datos.segundoNombre.trim().length < 2) {
+      return 'El segundo nombre debe tener al menos 2 caracteres si decides llenarlo.';
+    }
+    if (datos.apellidoPaterno.trim().length < 2) {
+      return 'El apellido paterno debe tener al menos 2 caracteres.';
+    }
+    if (datos.apellidoMaterno.trim().length < 2) {
+      return 'El apellido materno debe tener al menos 2 caracteres.';
+    }
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datos.fechaNacimiento.trim())) {
+      return 'La fecha de nacimiento debe usar el formato AAAA-MM-DD.';
+    }
+    if (!esMayorDeEdad(datos.fechaNacimiento)) {
+      return 'Debes ser mayor de 18 años para operar en GestoPago.';
+    }
+    if (!emailRegex.hasMatch(datos.correo.trim())) {
+      return 'Ingresa un correo electrónico válido.';
+    }
+    if (!RegExp(r'^\d{10}$').hasMatch(datos.telefonoMovil.trim())) {
+      return 'El teléfono móvil debe tener exactamente 10 dígitos.';
+    }
+    final alt = datos.telefonoAlternativo.trim();
+    if (alt.isNotEmpty && !RegExp(r'^\d{10}$').hasMatch(alt)) {
+      return 'El teléfono alternativo debe tener 10 dígitos o permanecer vacío.';
+    }
+    if (datos.ocupacion.trim().isEmpty || datos.empresa.trim().isEmpty) {
+      return 'Ocupación y empresa son obligatorios.';
+    }
+    final ingreso = double.tryParse(datos.ingresoMensual.trim());
+    if (ingreso == null || ingreso <= 0) {
+      return 'El ingreso mensual debe ser mayor a \$0.00.';
+    }
+    final dom = datos.domicilio;
+    if (dom.calle.trim().isEmpty ||
+        dom.numeroExterior.trim().isEmpty ||
+        dom.colonia.trim().isEmpty ||
+        dom.municipio.trim().isEmpty ||
+        dom.estado.trim().isEmpty ||
+        dom.pais.trim().isEmpty) {
+      return 'Completa los campos obligatorios del domicilio.';
+    }
+    if (!RegExp(r'^\d{5}$').hasMatch(dom.codigoPostal.trim())) {
+      return 'El código postal debe tener exactamente 5 dígitos.';
+    }
+    return null;
+  }
+
+  static String? validarRegistro(
+    ClientePerfil datos, {
+    required String password,
+    required String confirmarPassword,
+  }) {
+    final errBase = validarDatosBase(datos);
+    if (errBase != null) return errBase;
+    if (!curpRegex.hasMatch(datos.curp.trim())) {
+      return 'La CURP debe tener los 18 caracteres del formato oficial mexicano.';
+    }
+    if (!rfcRegex.hasMatch(datos.rfc.trim())) {
+      return 'El RFC debe tener 12 o 13 caracteres válidos (con homoclave).';
+    }
+    if (!passwordRegex.hasMatch(password)) {
+      return 'La contraseña requiere mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
+    }
+    if (password != confirmarPassword) {
+      return 'Las contraseñas no coinciden.';
+    }
+    return null;
+  }
+}

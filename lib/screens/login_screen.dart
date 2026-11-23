@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../core/config/api_config.dart';
 import '../core/network/api_client.dart';
 import '../models/auth_models.dart';
+import '../models/cliente_models.dart';
+import '../services/cliente_service.dart';
 import '../state/session_controller.dart';
 import '../widgets/auth_text_field.dart';
 import 'register_screen.dart';
@@ -31,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _ownsController = false;
   bool _isPasswordObscured = true;
   String? _errorMensaje;
+  RegistroClienteResultado? _registroReciente;
 
   @override
   void initState() {
@@ -61,12 +64,21 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _llenarUsuarioPrueba() {
-    setState(() {
-      _correoController.text = 'ana.lopez.prueba@example.com';
-      _passwordController.text = 'Prueba2026!';
-      _errorMensaje = null;
-    });
+  Future<void> _abrirRegistro() async {
+    final resultado = await Navigator.of(context).push<RegistroClienteResultado>(
+      MaterialPageRoute(
+        builder: (_) => RegisterScreen(
+          clienteService: ClienteService(apiClient: _controller.apiClient),
+        ),
+      ),
+    );
+    if (resultado != null && mounted) {
+      setState(() {
+        _correoController.text = resultado.correo;
+        _registroReciente = resultado;
+        _errorMensaje = null;
+      });
+    }
   }
 
   Future<void> _mostrarDialogoConflictoSesion(ConflictoSesion conflicto) async {
@@ -232,11 +244,37 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ],
+                    if (_registroReciente != null) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_outline, color: Colors.green.shade700),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Cuenta registrada (${_registroReciente!.numeroCuenta}). Inicia sesión con tu contraseña y código 2FA.',
+                                style: TextStyle(
+                                  color: Colors.green.shade900,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     AuthTextField(
                       controller: _correoController,
                       label: 'Correo electrónico',
-                      hintText: 'ana.lopez.prueba@example.com',
+                      hintText: 'correo@ejemplo.com',
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
@@ -302,17 +340,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         cargando ? 'Validando credenciales...' : 'Iniciar Sesión con 2FA',
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: cargando ? null : _llenarUsuarioPrueba,
-                      icon: const Icon(Icons.bolt_rounded, size: 18),
-                      label: const Text('Cargar credenciales de prueba (Ana)'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, RegisterScreen.routeName),
-                      child: const Text('¿No tienes cuenta? Regístrate aquí'),
+                      onPressed: cargando ? null : _abrirRegistro,
+                      icon: const Icon(Icons.person_add_outlined, size: 18),
+                      label: const Text('¿No tienes cuenta? Regístrate aquí'),
                     ),
                   ],
                 ),
