@@ -2,18 +2,46 @@ import '../core/network/api_client.dart';
 import '../models/product_models.dart';
 import '../models/transaction_models.dart';
 
+class SolicitudOtpCompraResultado {
+  const SolicitudOtpCompraResultado({
+    required this.codigoOtp,
+    required this.correoEnviado,
+    this.correoDestinoEnmascarado,
+    required this.mensaje,
+  });
+
+  final String codigoOtp;
+  final bool correoEnviado;
+  final String? correoDestinoEnmascarado;
+  final String mensaje;
+}
+
 class TransactionService {
   const TransactionService({required this.apiClient});
 
   final ApiClient apiClient;
 
-  Future<String> solicitarCodigo2FAParaCompra(String numeroCuenta) async {
+  Future<SolicitudOtpCompraResultado> solicitarReto2FAParaCompra(String numeroCuenta) async {
     final response = await apiClient.postJson(
       '/api/seguridad/2fa/solicitar',
-      body: {'numeroCuenta': numeroCuenta.trim()},
+      body: {
+        'numeroCuenta': numeroCuenta.trim(),
+        'motivo': 'COMPRA',
+      },
     );
     final data = response['data'] as Map<String, dynamic>? ?? <String, dynamic>{};
-    return (data['codigoOtp'] ?? '').toString();
+    final destino = data['correoDestinoEnmascarado']?.toString().trim();
+    return SolicitudOtpCompraResultado(
+      codigoOtp: (data['codigoOtp'] ?? '').toString(),
+      correoEnviado: data['correoEnviado'] as bool? ?? false,
+      correoDestinoEnmascarado: (destino != null && destino.isNotEmpty) ? destino : null,
+      mensaje: (data['mensaje'] ?? 'Código OTP 2FA generado.').toString(),
+    );
+  }
+
+  Future<String> solicitarCodigo2FAParaCompra(String numeroCuenta) async {
+    final resultado = await solicitarReto2FAParaCompra(numeroCuenta);
+    return resultado.codigoOtp;
   }
 
   Future<PurchaseTransactionResult> procesarCompra({

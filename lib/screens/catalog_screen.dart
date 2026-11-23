@@ -380,13 +380,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 1200
-            ? 4
-            : width >= 860
-                ? 3
-                : width >= 560
-                    ? 2
-                    : 1;
+        final crossAxisCount = width >= 1120
+            ? 3
+            : width >= 580
+                ? 2
+                : 1;
 
         return RefreshIndicator(
           onRefresh: _cargarCatalogo,
@@ -396,7 +394,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: 14,
               mainAxisSpacing: 14,
-              mainAxisExtent: 215,
+              mainAxisExtent: crossAxisCount == 1 ? 236 : 268,
             ),
             itemCount: filtrados.length,
             itemBuilder: (context, index) {
@@ -465,7 +463,7 @@ class _TarjetaProductoCatalogo extends StatelessWidget {
                       children: [
                         Text(
                           producto.nombre,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
@@ -516,50 +514,54 @@ class _TarjetaProductoCatalogo extends StatelessWidget {
               const Divider(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          producto.precio > 0
-                              ? '\$${producto.precio.toStringAsFixed(2)} MXN'
-                              : 'Monto abierto',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: colorScheme.primary,
-                              ),
+                  Text(
+                    producto.precio > 0
+                        ? '\$${producto.precio.toStringAsFixed(2)} MXN'
+                        : 'Monto abierto',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: colorScheme.primary,
                         ),
-                        Text(
-                          'ID #${producto.idProducto}',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: colorScheme.outline,
-                              ),
-                        ),
-                      ],
+                  ),
+                  Flexible(
+                    child: Text(
+                      'Prod #${producto.idProducto} • Serv #${producto.idServicio}',
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: colorScheme.outline,
+                          ),
                     ),
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Ver detalle',
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
                         visualDensity: VisualDensity.compact,
-                        onPressed: onVerDetalle,
-                        icon: const Icon(Icons.info_outline_rounded, size: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       ),
-                      FilledButton.tonalIcon(
-                        style: FilledButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        onPressed: producto.disponible ? onComprar : null,
-                        icon: const Icon(Icons.shopping_cart_checkout_rounded, size: 16),
-                        label: const Text('Comprar'),
+                      onPressed: onVerDetalle,
+                      icon: const Icon(Icons.info_outline_rounded, size: 16),
+                      label: const Text('Detalle'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      style: FilledButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       ),
-                    ],
+                      onPressed: producto.disponible ? onComprar : null,
+                      icon: const Icon(Icons.shopping_cart_checkout_rounded, size: 16),
+                      label: const Text('Comprar'),
+                    ),
                   ),
                 ],
               ),

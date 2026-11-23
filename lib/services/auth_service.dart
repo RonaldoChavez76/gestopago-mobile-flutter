@@ -34,7 +34,10 @@ class AuthService {
       final otpResp = await apiClient.postJson(
         '/api/seguridad/2fa/solicitar',
         requiereAuth: false,
-        body: {'numeroCuenta': '4229215075268914'},
+        body: {
+          'numeroCuenta': '4229215075268914',
+          'motivo': 'LOGIN',
+        },
       );
       final otpData = otpResp['data'] as Map<String, dynamic>? ?? <String, dynamic>{};
       return Login2faChallenge(
@@ -45,6 +48,8 @@ class AuthService {
         codigoOtp: (otpData['codigoOtp'] ?? '').toString(),
         expiraEnSegundos: (otpData['expiraEnSegundos'] as num?)?.toInt() ?? 300,
         mensaje: (otpData['mensaje'] ?? 'Código OTP 2FA generado en el servidor.').toString(),
+        correoEnviado: otpData['correoEnviado'] as bool?,
+        correoDestinoEnmascarado: otpData['correoDestinoEnmascarado']?.toString(),
       );
     }
   }
@@ -107,9 +112,12 @@ class AuthService {
       if (data == null) return sesionActual;
 
       return sesionActual.copyWith(
+        usuarioId: (data['usuarioId'] as num?)?.toInt() ?? sesionActual.usuarioId,
+        clienteId: (data['clienteId'] as num?)?.toInt() ?? sesionActual.clienteId,
         saldoCuenta: (data['saldoCuenta'] as num?)?.toDouble() ?? sesionActual.saldoCuenta,
         numeroCuenta: data['numeroCuenta']?.toString() ?? sesionActual.numeroCuenta,
         nombreCliente: data['nombreCliente']?.toString() ?? sesionActual.nombreCliente,
+        correo: data['correo']?.toString() ?? sesionActual.correo,
       );
     } on ApiException catch (e) {
       if (e.statusCode == 401) {

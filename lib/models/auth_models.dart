@@ -35,6 +35,8 @@ class Login2faChallenge {
     required this.codigoOtp,
     required this.expiraEnSegundos,
     required this.mensaje,
+    this.correoEnviado,
+    this.correoDestinoEnmascarado,
   });
 
   final bool requiere2FA;
@@ -44,6 +46,8 @@ class Login2faChallenge {
   final String codigoOtp;
   final int expiraEnSegundos;
   final String mensaje;
+  final bool? correoEnviado;
+  final String? correoDestinoEnmascarado;
 
   factory Login2faChallenge.fromJson(Map<String, dynamic> json) {
     return Login2faChallenge(
@@ -54,6 +58,8 @@ class Login2faChallenge {
       codigoOtp: (json['codigoOtp'] ?? '').toString(),
       expiraEnSegundos: (json['expiraEnSegundos'] as num?)?.toInt() ?? 300,
       mensaje: (json['mensaje'] ?? 'Ingresa el código de verificación de 6 dígitos.').toString(),
+      correoEnviado: json['correoEnviado'] as bool?,
+      correoDestinoEnmascarado: json['correoDestinoEnmascarado']?.toString(),
     );
   }
 }
@@ -67,6 +73,7 @@ class UserSession {
     required this.correo,
     this.expiresAt,
     this.sessionId,
+    this.usuarioId,
     this.clienteId,
     this.nombreCliente,
     this.numeroCuenta,
@@ -79,6 +86,7 @@ class UserSession {
   final DateTime? expiresAt;
   final String? sessionId;
   final String plataforma;
+  final int? usuarioId;
   final int? clienteId;
   final String? nombreCliente;
   final String correo;
@@ -91,9 +99,12 @@ class UserSession {
   }
 
   UserSession copyWith({
+    int? usuarioId,
+    int? clienteId,
     double? saldoCuenta,
     String? numeroCuenta,
     String? nombreCliente,
+    String? correo,
   }) {
     return UserSession(
       accessToken: accessToken,
@@ -102,9 +113,10 @@ class UserSession {
       expiresAt: expiresAt,
       sessionId: sessionId,
       plataforma: plataforma,
-      clienteId: clienteId,
+      usuarioId: usuarioId ?? this.usuarioId,
+      clienteId: clienteId ?? this.clienteId,
       nombreCliente: nombreCliente ?? this.nombreCliente,
-      correo: correo,
+      correo: correo ?? this.correo,
       numeroCuenta: numeroCuenta ?? this.numeroCuenta,
       saldoCuenta: saldoCuenta ?? this.saldoCuenta,
     );
@@ -122,6 +134,7 @@ class UserSession {
       expiresAt: parsedExpiresAt,
       sessionId: json['sessionId']?.toString(),
       plataforma: (json['plataforma'] ?? 'WEB').toString(),
+      usuarioId: (json['usuarioId'] as num?)?.toInt(),
       clienteId: (json['clienteId'] as num?)?.toInt(),
       nombreCliente: json['nombreCliente']?.toString(),
       correo: (json['correo'] ?? correoFallback).toString(),
@@ -137,6 +150,7 @@ class UserSession {
       'expiresIn': expiresIn,
       'expiresAt': expiresAt?.toIso8601String(),
       'sessionId': sessionId,
+      'usuarioId': usuarioId,
       'plataforma': plataforma,
       'clienteId': clienteId,
       'nombreCliente': nombreCliente,
