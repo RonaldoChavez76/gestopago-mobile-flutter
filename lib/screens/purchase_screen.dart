@@ -250,41 +250,63 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   color: colorScheme.primaryContainer.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: colorScheme.primary,
-                      child: Icon(
-                        widget.producto.esRecarga
-                            ? Icons.phone_android_rounded
-                            : Icons.receipt_long_rounded,
-                        color: colorScheme.onPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.producto.nombre,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: colorScheme.primary,
+                          child: Icon(
+                            widget.producto.esRecarga
+                                ? Icons.phone_android_rounded
+                                : Icons.receipt_long_rounded,
+                            color: colorScheme.onPrimary,
                           ),
-                          Text(
-                            '${widget.producto.servicio} • ID #${widget.producto.idProducto}',
-                            style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.producto.nombre,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${widget.producto.servicio} • ID #${widget.producto.idProducto}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    if (saldoActual != null)
-                      Chip(
-                        label: Text('Saldo: \$${saldoActual.toStringAsFixed(2)}'),
-                        visualDensity: VisualDensity.compact,
+                    if (saldoActual != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Saldo disponible: \$${saldoActual.toStringAsFixed(2)} MXN',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                        ),
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -353,35 +375,58 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: AuthTextField(
-                      controller: _codigo2faController,
-                      label: 'Código 2FA OTP (6 dígitos)',
-                      hintText: 'Solicita o ingresa tu OTP',
-                      icon: Icons.security_rounded,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    height: 54,
-                    child: FilledButton.tonalIcon(
-                      onPressed: _solicitandoOtp ? null : _generarCodigo2FA,
-                      icon: _solicitandoOtp
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.key_rounded),
-                      label: const Text('Generar OTP'),
-                    ),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, otpConstraints) {
+                  final campoOtp = AuthTextField(
+                    controller: _codigo2faController,
+                    label: 'Código 2FA OTP (6 dígitos) *',
+                    hintText: 'Ingresa el código de 6 dígitos',
+                    icon: Icons.security_rounded,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    validator: (val) {
+                      final text = (val ?? '').trim();
+                      if (text.isEmpty) {
+                        return 'Solicita e ingresa el código 2FA de 6 dígitos.';
+                      }
+                      if (!RegExp(r'^[0-9]{6}$').hasMatch(text)) {
+                        return 'El código 2FA debe tener exactamente 6 dígitos numéricos.';
+                      }
+                      return null;
+                    },
+                  );
+                  final botonOtp = FilledButton.tonalIcon(
+                    onPressed: _solicitandoOtp ? null : _generarCodigo2FA,
+                    icon: _solicitandoOtp
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.key_rounded),
+                    label: const Text('Generar OTP'),
+                  );
+
+                  if (otpConstraints.maxWidth < 460) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        campoOtp,
+                        const SizedBox(height: 10),
+                        SizedBox(height: 48, child: botonOtp),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: campoOtp),
+                      const SizedBox(width: 10),
+                      SizedBox(height: 54, child: botonOtp),
+                    ],
+                  );
+                },
               ),
               if (_otpGeneradoServidor != null && _otpGeneradoServidor!.isNotEmpty) ...[
                 const SizedBox(height: 8),

@@ -132,14 +132,16 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             title: Row(
               children: [
                 const Icon(Icons.account_balance_wallet_outlined),
-                const SizedBox(width: 10),
-                const Flexible(
+                const SizedBox(width: 8),
+                Flexible(
                   child: Text(
-                    'Ecosistema Digital GestoPago',
+                    constraints.maxWidth >= 600
+                        ? 'Ecosistema Digital GestoPago'
+                        : 'GestoPago',
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
@@ -310,21 +312,31 @@ class _PanelResumenSesion extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           child: Text(
-                            sesion.nombreCliente ?? sesion.correo,
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            '2FA Verificado • ${sesion.plataforma}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary,
+                            ),
                           ),
                         ),
-                        Chip(
-                          label: Text('2FA Verificado • ${sesion.plataforma}'),
-                          backgroundColor: Colors.white,
+                        const SizedBox(height: 12),
+                        Text(
+                          sesion.nombreCliente ?? sesion.correo,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                       ],
                     ),
