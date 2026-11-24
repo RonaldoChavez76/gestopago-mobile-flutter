@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AuthTextField extends StatelessWidget {
   const AuthTextField({
@@ -11,6 +12,7 @@ class AuthTextField extends StatelessWidget {
     this.onToggleVisibility,
     this.validator,
     this.maxLength,
+    this.inputFormatters,
     this.textAlign = TextAlign.start,
     super.key,
   });
@@ -24,6 +26,7 @@ class AuthTextField extends StatelessWidget {
   final VoidCallback? onToggleVisibility;
   final String? Function(String?)? validator;
   final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
   final TextAlign textAlign;
 
   @override
@@ -34,6 +37,7 @@ class AuthTextField extends StatelessWidget {
       obscureText: obscureText,
       validator: validator,
       maxLength: maxLength,
+      inputFormatters: inputFormatters,
       textAlign: textAlign,
       decoration: InputDecoration(
         labelText: label,

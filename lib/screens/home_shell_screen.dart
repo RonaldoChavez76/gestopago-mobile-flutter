@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
 import '../services/cliente_service.dart';
 import '../state/session_controller.dart';
+import '../widgets/bbva_client_card.dart';
 import 'catalog_screen.dart';
 import 'executive_screen.dart';
 import 'history_screen.dart';
@@ -329,105 +330,26 @@ class _PanelResumenSesion extends StatelessWidget {
   Widget build(BuildContext context) {
     final sesion = sessionController.sesionActual!;
     final colorScheme = Theme.of(context).colorScheme;
-    final saldoTexto = sesion.saldoCuenta != null
-        ? '\$${sesion.saldoCuenta!.toStringAsFixed(2)} MXN'
-        : 'Sincronizando...';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 880),
+          constraints: const BoxConstraints(maxWidth: 1080),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      colorScheme.primary,
-                      colorScheme.primary.withValues(alpha: 0.82),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '2FA Verificado • ${sesion.plataforma}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: sesion.esEjecutivo
-                                    ? const Color(0xFFFDE68A)
-                                    : Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'Rol: ${sesion.esEjecutivo ? 'EJECUTIVO' : 'CLIENTE'}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: sesion.esEjecutivo ? const Color(0xFF78350F) : Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          sesion.nombreCliente ?? sesion.correo,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Saldo Disponible',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      saldoTexto,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Cuenta: ${sesion.numeroCuenta ?? "4229215075268914"} • Correo: ${sesion.correo}',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
-                    ),
-                  ],
-                ),
+              BbvaClientCard(
+                nombreTitular: sesion.nombreCliente ?? sesion.correo,
+                correo: sesion.correo,
+                plataforma: sesion.plataforma,
+                numeroCuenta: sesion.numeroCuenta,
+                saldoCuenta: sesion.saldoCuenta,
+                esEjecutivo: sesion.esEjecutivo,
+                cuentaActiva: sesion.cuentaActiva,
+                clienteId: sesion.clienteId,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -443,11 +365,13 @@ class _PanelResumenSesion extends StatelessWidget {
                         children: [
                           Icon(Icons.security_rounded, color: colorScheme.primary),
                           const SizedBox(width: 10),
-                          Text(
-                            'Estado de Sesión Única Activa',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          Expanded(
+                            child: Text(
+                              'Estado de Sesión Única Activa',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
                           ),
                         ],
                       ),

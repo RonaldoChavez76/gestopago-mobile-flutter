@@ -10,7 +10,11 @@ class CatalogProduct {
     required this.disponible,
     required this.descripcion,
     this.tipoReferencia,
+    this.logoUrl,
   });
+
+  static const String logoBaseUrl =
+      'https://gestopago.portalventas.net/sistema/images/gestopago/servicios';
 
   final int idProducto;
   final int idServicio;
@@ -22,16 +26,25 @@ class CatalogProduct {
   final bool disponible;
   final String descripcion;
   final String? tipoReferencia;
+  final String? logoUrl;
 
   bool get esRecarga => tipoFront == '1' || categoria == 'Recargas Telefónicas';
 
+  static String? construirLogoUrl(int idServicio) {
+    if (idServicio <= 0) {
+      return null;
+    }
+    return '$logoBaseUrl/$idServicio.png';
+  }
+
   factory CatalogProduct.fromJson(Map<String, dynamic> json) {
     final rawIdProd = json['idProducto'] ?? json['productId'] ?? json['id'] ?? '0';
-    final rawIdServ = json['idServicio'] ?? '133';
+    final rawIdServ = json['idServicio'];
     final idProd = int.tryParse(rawIdProd.toString()) ?? 0;
     final nombre = (json['producto'] ?? json['name'] ?? 'Producto #$idProd').toString().trim();
     final servicioRaw = (json['servicio'] ?? _inferirMarcaServicio(nombre)).toString().trim();
-    final idServ = int.tryParse(rawIdServ.toString()) ?? _inferirIdServicio(nombre, servicioRaw, idProd);
+    final parsedIdServ = rawIdServ == null ? null : int.tryParse(rawIdServ.toString());
+    final idServ = parsedIdServ ?? _inferirIdServicio(nombre, servicioRaw, idProd);
 
     final precioRaw = json['precio'] ?? json['price'] ?? 0;
     final precio = precioRaw is num
@@ -46,6 +59,10 @@ class CatalogProduct {
     final descripcion = (legend != null && legend.isNotEmpty)
         ? legend
         : _construirDescripcion(nombre, servicioRaw, categoria, precio);
+    final rawLogoUrl = json['logoUrl']?.toString().trim();
+    final logoUrl = (rawLogoUrl != null && rawLogoUrl.isNotEmpty)
+        ? rawLogoUrl
+        : construirLogoUrl(idServ);
 
     return CatalogProduct(
       idProducto: idProd,
@@ -58,6 +75,7 @@ class CatalogProduct {
       disponible: activo,
       descripcion: descripcion,
       tipoReferencia: json['tipoReferencia']?.toString(),
+      logoUrl: logoUrl,
     );
   }
 
@@ -117,4 +135,3 @@ class CatalogProduct {
     return 'Pago electrónico de recibo o referencia para el servicio $servicio ($nombre)$montoStr procesado en línea vía GestoPago.';
   }
 }
-

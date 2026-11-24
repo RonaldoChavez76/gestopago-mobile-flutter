@@ -4,6 +4,7 @@ import '../core/network/api_client.dart';
 import '../models/product_models.dart';
 import '../services/catalog_service.dart';
 import '../state/session_controller.dart';
+import '../widgets/product_logo_avatar.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({
@@ -28,13 +29,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
     'Pago de Servicios',
     'Entretenimiento y Pines',
   ];
+  static const List<int> _tamanosPagina = [12, 24, 36];
 
   late final CatalogService _service;
   final _busquedaController = TextEditingController();
+  final _scrollController = ScrollController();
 
   List<CatalogProduct> _productos = const [];
   String _categoriaSeleccionada = 'Todos';
   String _filtroBusqueda = '';
+  int _paginaActual = 1;
+  int _tamanoPagina = 12;
+  bool _vistaCuadricula = true;
   bool _cargando = true;
   String? _errorMensaje;
 
@@ -48,6 +54,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   void dispose() {
     _busquedaController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -62,6 +69,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
       if (!mounted) return;
       setState(() {
         _productos = lista;
+        _paginaActual = 1;
         _cargando = false;
       });
     } on ApiException catch (e) {
@@ -93,9 +101,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
     }).toList();
   }
 
+  void _cambiarPagina(int nuevaPagina, int totalPaginas) {
+    final acotada = nuevaPagina.clamp(1, totalPaginas);
+    setState(() => _paginaActual = acotada);
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   void _mostrarDetalleProducto(CatalogProduct producto) {
     final colorScheme = Theme.of(context).colorScheme;
-    final visual = _VisualProducto.paraProducto(producto, colorScheme);
 
     showModalBottomSheet<void>(
       context: context,
@@ -116,11 +135,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: visual.colorFondo,
-                        child: Icon(visual.icono, color: visual.colorIcono, size: 30),
-                      ),
+                      ProductLogoAvatar(producto: producto, size: 54),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
@@ -179,8 +194,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Tipo de operación: ${producto.esRecarga ? "Recarga Tiempo Aire" : "Pago de Servicio"}',
+                            Expanded(
+                              child: Text(
+                                'Tipo de operación: ${producto.esRecarga ? "Recarga Tiempo Aire" : "Pago de Servicio"}',
+                              ),
                             ),
                             Chip(
                               label: Text(
@@ -232,18 +249,29 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final filtrados = _productosFiltrados;
+    final totalPaginas =
+        filtrados.isEmpty ? 1 : (filtrados.length / _tamanoPagina).ceil();
+    final paginaSegura = _paginaActual.clamp(1, totalPaginas);
+    final indiceInicio = (paginaSegura - 1) * _tamanoPagina;
+    final indiceFin = (indiceInicio + _tamanoPagina).clamp(0, filtrados.length);
+    final productosPagina = filtrados.isEmpty
+        ? const <CatalogProduct>[]
+        : filtrados.sublist(indiceInicio, indiceFin);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _busquedaController,
-                  onChanged: (val) => setState(() => _filtroBusqueda = val.trim()),
+                  onChanged: (val) => setState(() {
+                    _filtroBusqueda = val.trim();
+                    _paginaActual = 1;
+                  }),
                   decoration: InputDecoration(
                     hintText: 'Buscar producto, marca o ID...',
                     prefixIcon: const Icon(Icons.search_rounded),
@@ -252,14 +280,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         : IconButton(
                             onPressed: () {
                               _busquedaController.clear();
-                              setState(() => _filtroBusqueda = '');
+                              setState(() {
+                                _filtroBusqueda = '';
+                                _paginaActual = 1;
+                              });
                             },
                             icon: const Icon(Icons.clear_rounded),
                           ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               IconButton.filledTonal(
                 tooltip: 'Actualizar catálogo desde GestoPago',
                 onPressed: _cargando ? null : _cargarCatalogo,
@@ -269,9 +300,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ),
         ),
         SizedBox(
-          height: 48,
+          height: 46,
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: _categorias.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -281,44 +312,169 @@ class _CatalogScreenState extends State<CatalogScreen> {
               return ChoiceChip(
                 label: Text(cat),
                 selected: seleccionada,
-                onSelected: (_) => setState(() => _categoriaSeleccionada = cat),
+                onSelected: (_) => setState(() {
+                  _categoriaSeleccionada = cat;
+                  _paginaActual = 1;
+                }),
               );
             },
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
             children: [
               Text(
-                'Mostrando ${filtrados.length} productos disponibles',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                filtrados.isEmpty
+                    ? 'Mostrando 0 productos disponibles'
+                    : 'Mostrando ${filtrados.length} productos (${indiceInicio + 1}-$indiceFin)',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
                     ),
               ),
-              if (_categoriaSeleccionada != 'Todos' || _filtroBusqueda.isNotEmpty)
-                TextButton(
-                  onPressed: () {
-                    _busquedaController.clear();
-                    setState(() {
-                      _categoriaSeleccionada = 'Todos';
-                      _filtroBusqueda = '';
-                    });
-                  },
-                  child: const Text('Limpiar filtros'),
-                ),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      isDense: true,
+                      value: _tamanoPagina,
+                      items: _tamanosPagina
+                          .map(
+                            (tam) => DropdownMenuItem(
+                              value: tam,
+                              child: Text(
+                                '$tam / pág',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (nuevo) {
+                        if (nuevo != null) {
+                          setState(() {
+                            _tamanoPagina = nuevo;
+                            _paginaActual = 1;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Vista en cuadrícula (2 columnas)',
+                    isSelected: _vistaCuadricula,
+                    color: _vistaCuadricula ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                    onPressed: () => setState(() => _vistaCuadricula = true),
+                    icon: const Icon(Icons.grid_view_rounded, size: 20),
+                  ),
+                  IconButton(
+                    tooltip: 'Vista en lista amplia',
+                    isSelected: !_vistaCuadricula,
+                    color: !_vistaCuadricula ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                    onPressed: () => setState(() => _vistaCuadricula = false),
+                    icon: const Icon(Icons.view_agenda_outlined, size: 20),
+                  ),
+                  if (_categoriaSeleccionada != 'Todos' || _filtroBusqueda.isNotEmpty)
+                    TextButton(
+                      onPressed: () {
+                        _busquedaController.clear();
+                        setState(() {
+                          _categoriaSeleccionada = 'Todos';
+                          _filtroBusqueda = '';
+                          _paginaActual = 1;
+                        });
+                      },
+                      child: const Text('Limpiar'),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
         Expanded(
-          child: _construirContenido(filtrados, colorScheme),
+          child: _construirContenido(productosPagina, colorScheme),
         ),
+        if (!_cargando && _errorMensaje == null && filtrados.isNotEmpty)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  flex: 3,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          minimumSize: const Size(0, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        ),
+                        onPressed: paginaSegura > 1
+                            ? () => _cambiarPagina(paginaSegura - 1, totalPaginas)
+                            : null,
+                        icon: const Icon(Icons.chevron_left_rounded, size: 18),
+                        label: const Text('Anterior'),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  flex: 4,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Página $paginaSegura de $totalPaginas',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  flex: 3,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          minimumSize: const Size(0, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        ),
+                        onPressed: paginaSegura < totalPaginas
+                            ? () => _cambiarPagina(paginaSegura + 1, totalPaginas)
+                            : null,
+                        icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                        label: const Text('Siguiente'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
 
-  Widget _construirContenido(List<CatalogProduct> filtrados, ColorScheme colorScheme) {
+  Widget _construirContenido(List<CatalogProduct> productosPagina, ColorScheme colorScheme) {
     if (_cargando) {
       return const Center(
         child: Column(
@@ -358,7 +514,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
       );
     }
 
-    if (filtrados.isEmpty) {
+    if (productosPagina.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -380,27 +536,31 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 1120
-            ? 3
-            : width >= 580
-                ? 2
-                : 1;
+        final crossAxisCount = !_vistaCuadricula
+            ? 1
+            : width >= 1120
+                ? 4
+                : width >= 720
+                    ? 3
+                    : 2;
 
         return RefreshIndicator(
           onRefresh: _cargarCatalogo,
           child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-              mainAxisExtent: crossAxisCount == 1 ? 236 : 268,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              mainAxisExtent: crossAxisCount == 1 ? 222 : 254,
             ),
-            itemCount: filtrados.length,
+            itemCount: productosPagina.length,
             itemBuilder: (context, index) {
-              final prod = filtrados[index];
+              final prod = productosPagina[index];
               return _TarjetaProductoCatalogo(
                 producto: prod,
+                compacta: crossAxisCount > 1,
                 onVerDetalle: () => _mostrarDetalleProducto(prod),
                 onComprar: () {
                   if (widget.onProductoSeleccionado != null) {
@@ -421,21 +581,23 @@ class _CatalogScreenState extends State<CatalogScreen> {
 class _TarjetaProductoCatalogo extends StatelessWidget {
   const _TarjetaProductoCatalogo({
     required this.producto,
+    required this.compacta,
     required this.onVerDetalle,
     required this.onComprar,
   });
 
   final CatalogProduct producto;
+  final bool compacta;
   final VoidCallback onVerDetalle;
   final VoidCallback onComprar;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final visual = _VisualProducto.paraProducto(producto, colorScheme);
 
     return Card(
       elevation: 0,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(color: colorScheme.outlineVariant),
@@ -444,181 +606,240 @@ class _TarjetaProductoCatalogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: onVerDetalle,
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: visual.colorFondo,
-                    child: Icon(visual.icono, color: visual.colorIcono, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          producto.nombre,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          producto.servicio,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: producto.disponible
-                          ? Colors.green.withValues(alpha: 0.14)
-                          : colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      producto.disponible ? 'Activo' : 'Inactivo',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: producto.disponible ? Colors.green.shade800 : colorScheme.onErrorContainer,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: Text(
-                  producto.descripcion,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                ),
-              ),
-              const Divider(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    producto.precio > 0
-                        ? '\$${producto.precio.toStringAsFixed(2)} MXN'
-                        : 'Monto abierto',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: colorScheme.primary,
-                        ),
-                  ),
-                  Flexible(
-                    child: Text(
-                      'Prod #${producto.idProducto} • Serv #${producto.idServicio}',
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: colorScheme.outline,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                      ),
-                      onPressed: onVerDetalle,
-                      icon: const Icon(Icons.info_outline_rounded, size: 16),
-                      label: const Text('Detalle'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      style: FilledButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                      ),
-                      onPressed: producto.disponible ? onComprar : null,
-                      icon: const Icon(Icons.shopping_cart_checkout_rounded, size: 16),
-                      label: const Text('Comprar'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+          padding: EdgeInsets.all(compacta ? 12 : 16),
+          child: compacta
+              ? _construirContenidoCompacto(context, colorScheme)
+              : _construirContenidoAmplio(context, colorScheme),
         ),
       ),
     );
   }
-}
 
-class _VisualProducto {
-  const _VisualProducto({
-    required this.icono,
-    required this.colorFondo,
-    required this.colorIcono,
-  });
+  Widget _construirEstadoBadge(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: producto.disponible
+            ? Colors.green.withValues(alpha: 0.14)
+            : colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        producto.disponible ? 'Activo' : 'Inactivo',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: producto.disponible ? Colors.green.shade800 : colorScheme.onErrorContainer,
+        ),
+      ),
+    );
+  }
 
-  final IconData icono;
-  final Color colorFondo;
-  final Color colorIcono;
+  Widget _construirContenidoCompacto(BuildContext context, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProductLogoAvatar(producto: producto, size: 40),
+            _construirEstadoBadge(colorScheme),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          producto.nombre,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                height: 1.2,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          producto.servicio,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 11,
+              ),
+        ),
+        const Spacer(),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            producto.precio > 0
+                ? '\$${producto.precio.toStringAsFixed(2)} MXN'
+                : 'Monto abierto',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: colorScheme.primary,
+                ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Prod #${producto.idProducto} • Serv #${producto.idServicio}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colorScheme.outline,
+                  fontSize: 10.5,
+                ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  minimumSize: const Size(0, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                ),
+                onPressed: onVerDetalle,
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Detalle', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  minimumSize: const Size(0, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                ),
+                onPressed: producto.disponible ? onComprar : null,
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Comprar', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-  static _VisualProducto paraProducto(CatalogProduct producto, ColorScheme scheme) {
-    final upper = '${producto.nombre} ${producto.servicio}'.toUpperCase();
-    if (producto.categoria == 'Recargas Telefónicas') {
-      return _VisualProducto(
-        icono: Icons.phone_android_rounded,
-        colorFondo: scheme.primaryContainer,
-        colorIcono: scheme.onPrimaryContainer,
-      );
-    }
-    if (producto.categoria == 'Entretenimiento y Pines') {
-      return _VisualProducto(
-        icono: Icons.card_giftcard_rounded,
-        colorFondo: scheme.tertiaryContainer,
-        colorIcono: scheme.onTertiaryContainer,
-      );
-    }
-    if (upper.contains('CFE') || upper.contains('LUZ')) {
-      return _VisualProducto(
-        icono: Icons.bolt_rounded,
-        colorFondo: Colors.amber.withValues(alpha: 0.2),
-        colorIcono: Colors.amber.shade900,
-      );
-    }
-    if (upper.contains('TELMEX') || upper.contains('IZZI') || upper.contains('TOTALPLAY')) {
-      return _VisualProducto(
-        icono: Icons.router_rounded,
-        colorFondo: scheme.secondaryContainer,
-        colorIcono: scheme.onSecondaryContainer,
-      );
-    }
-    return _VisualProducto(
-      icono: Icons.receipt_long_rounded,
-      colorFondo: scheme.secondaryContainer,
-      colorIcono: scheme.onSecondaryContainer,
+  Widget _construirContenidoAmplio(BuildContext context, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProductLogoAvatar(producto: producto, size: 46),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    producto.nombre,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    producto.servicio,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            _construirEstadoBadge(colorScheme),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Expanded(
+          child: Text(
+            producto.descripcion,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ),
+        const Divider(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  producto.precio > 0
+                      ? '\$${producto.precio.toStringAsFixed(2)} MXN'
+                      : 'Monto abierto',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: colorScheme.primary,
+                      ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'Prod #${producto.idProducto} • Serv #${producto.idServicio}',
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colorScheme.outline,
+                    ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                ),
+                onPressed: onVerDetalle,
+                icon: const Icon(Icons.info_outline_rounded, size: 16),
+                label: const Text('Detalle'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                ),
+                onPressed: producto.disponible ? onComprar : null,
+                icon: const Icon(Icons.shopping_cart_checkout_rounded, size: 16),
+                label: const Text('Comprar'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
-
