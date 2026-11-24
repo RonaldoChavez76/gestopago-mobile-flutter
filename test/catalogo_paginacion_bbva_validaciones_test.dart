@@ -218,17 +218,17 @@ void main() {
   test('ClienteValidacion aplica longitudes mínimas, sin espacios, edad 18-120 y pago', () {
     const perfilValidoCorto = ClientePerfil(
       id: 1,
-      primerNombre: 'Al',
-      segundoNombre: 'Yu',
-      apellidoPaterno: 'Li',
-      apellidoMaterno: 'Su',
+      primerNombre: 'Ana',
+      segundoNombre: 'Luz',
+      apellidoPaterno: 'Gil',
+      apellidoMaterno: 'Paz',
       fechaNacimiento: '1998-05-12',
       curp: 'LISA980512MDFRRL01',
       rfc: 'LISA980512AB1',
       sexo: 'FEMENINO',
       nacionalidad: 'Surcoreana',
       estadoCivil: 'Soltero',
-      correo: 'al.yu@correo.com',
+      correo: 'ana.luz@correo.com',
       telefonoMovil: '5512345678',
       telefonoAlternativo: '5587654321',
       ocupacion: 'UX',
@@ -252,17 +252,17 @@ void main() {
 
     const perfilValidoCompleto = ClientePerfil(
       id: 1,
-      primerNombre: 'Al',
-      segundoNombre: 'Yu',
-      apellidoPaterno: 'Li',
-      apellidoMaterno: 'Su',
+      primerNombre: 'Ana',
+      segundoNombre: 'Luz',
+      apellidoPaterno: 'Gil',
+      apellidoMaterno: 'Paz',
       fechaNacimiento: '1998-05-12',
       curp: 'LISA980512MDFRRL01',
       rfc: 'LISA980512AB1',
       sexo: 'FEMENINO',
       nacionalidad: 'Mex',
       estadoCivil: 'Sol',
-      correo: 'al.yu@correo.com',
+      correo: 'ana.luz@correo.com',
       telefonoMovil: '5512345678',
       telefonoAlternativo: '5587654321',
       ocupacion: 'UXD',
@@ -282,6 +282,55 @@ void main() {
     );
 
     expect(ClienteValidacion.validarCamposBase(perfilValidoCompleto), isEmpty);
+
+    const perfilNombresDosLetras = ClientePerfil(
+      id: 1,
+      primerNombre: 'Li',
+      segundoNombre: 'Yu',
+      apellidoPaterno: 'Fe',
+      apellidoMaterno: 'Ed',
+      fechaNacimiento: '1998-05-12',
+      curp: 'LISA980512MDFRRL01',
+      rfc: 'LISA980512AB1',
+      sexo: 'FEMENINO',
+      nacionalidad: 'Mexicana',
+      estadoCivil: 'Soltero',
+      correo: 'li.yu@correo.com',
+      telefonoMovil: '5512345678',
+      telefonoAlternativo: '',
+      ocupacion: 'Analista',
+      empresa: 'HP',
+      ingresoMensual: '25000.00',
+      activo: true,
+      domicilio: DomicilioPerfil(
+        calle: 'Sol',
+        numeroExterior: '10-A',
+        numeroInterior: '',
+        colonia: 'Centro',
+        municipio: 'Monterrey',
+        estado: 'NL',
+        codigoPostal: '64000',
+        pais: 'México',
+      ),
+    );
+
+    final erroresNombresCortos = ClienteValidacion.validarCamposRegistro(
+      perfilNombresDosLetras,
+      password: 'ClaveSegura1!',
+      confirmarPassword: 'ClaveSegura1!',
+    );
+    expect(
+      erroresNombresCortos.keys,
+      containsAll(<String>[
+        'primerNombre',
+        'segundoNombre',
+        'apellidoPaterno',
+        'apellidoMaterno',
+        'password',
+      ]),
+    );
+    expect(ClienteValidacion.validarPassword('ClaveSegura1!'), isNotNull);
+    expect(ClienteValidacion.validarPassword('ClaveSegur1!'), isNull);
 
     const perfilInvalido = ClientePerfil(
       id: 1,

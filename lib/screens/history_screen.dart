@@ -20,12 +20,15 @@ class HistoryScreen extends StatefulWidget {
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
+enum _EstadoFiltroHistorial { todas, exitosas, rechazadas }
+
 class _HistoryScreenState extends State<HistoryScreen> {
   late final TransactionService _service;
   final _filtroController = TextEditingController();
 
-  List<PurchaseTransactionResult> _comprasExitosas = const [];
+  List<PurchaseTransactionResult> _transacciones = const [];
   String _busqueda = '';
+  _EstadoFiltroHistorial _estadoFiltro = _EstadoFiltroHistorial.todas;
   bool _cargando = true;
   String? _errorMensaje;
 
@@ -51,13 +54,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     final sesion = widget.sessionController.sesionActual;
     try {
-      final lista = await _service.obtenerHistorialComprasExitosas(
+      final lista = await _service.obtenerHistorialCompleto(
         clienteId: sesion?.clienteId,
         numeroCuenta: sesion?.numeroCuenta,
       );
       if (!mounted) return;
       setState(() {
-        _comprasExitosas = lista;
+        _transacciones = lista;
         _cargando = false;
       });
     } on ApiException catch (e) {
@@ -69,31 +72,45 @@ class _HistoryScreenState extends State<HistoryScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMensaje = 'No fue posible consultar tu historial de compras exitosas.';
+        _errorMensaje = 'No fue posible consultar tu historial de operaciones.';
         _cargando = false;
       });
     }
   }
 
   List<PurchaseTransactionResult> get _comprasFiltradas {
-    if (_busqueda.isEmpty) return _comprasExitosas;
     final q = _busqueda.toLowerCase();
-    return _comprasExitosas.where((item) {
+    return _transacciones.where((item) {
+      if (_estadoFiltro == _EstadoFiltroHistorial.exitosas && !item.exitoso) {
+        return false;
+      }
+      if (_estadoFiltro == _EstadoFiltroHistorial.rechazadas && item.exitoso) {
+        return false;
+      }
+      if (q.isEmpty) return true;
       final prod = (item.nombreProducto ?? item.tipoOperacion).toLowerCase();
       final upc = item.upc.toLowerCase();
       final idTx = (item.idTx ?? '').toLowerCase();
       final auth = (item.numAutorizacion ?? '').toLowerCase();
       final dest = item.destinoMostrar.toLowerCase();
+      final motivo = (item.motivoRechazo ?? item.mensaje).toLowerCase();
       return prod.contains(q) ||
           upc.contains(q) ||
           idTx.contains(q) ||
           auth.contains(q) ||
-          dest.contains(q);
+          dest.contains(q) ||
+          motivo.contains(q);
     }).toList();
   }
 
+  int get _conteoExitosas => _comprasFiltradas.where((item) => item.exitoso).length;
+
+  int get _conteoRechazadas => _comprasFiltradas.where((item) => !item.exitoso).length;
+
   double get _totalAcumulado {
-    return _comprasFiltradas.fold<double>(0.0, (acc, item) => acc + item.monto);
+    return _comprasFiltradas
+        .where((item) => item.exitoso)
+        .fold<double>(0.0, (acc, item) => acc + item.monto);
   }
 
   Future<void> _mostrarComprobanteDetalle(PurchaseTransactionResult compra) async {
@@ -146,7 +163,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   controller: _filtroController,
                   onChanged: (val) => setState(() => _busqueda = val.trim()),
                   decoration: InputDecoration(
-                    hintText: 'Buscar producto, UPC o teléfono...',
+                    hintText: 'Buscar producto, UPC, teléfono o motivo...',
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _busqueda.isEmpty
                         ? null
@@ -170,6 +187,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
         ),
         Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: _EstadoFiltroHistorial.values.map((estado) {
+              final etiqueta = switch (estado) {
+                _EstadoFiltroHistorial.todas => 'Todas',
+                _EstadoFiltroHistorial.exitosas => 'Exitosas',
+                _EstadoFiltroHistorial.rechazadas => 'Rechazadas',
+              };
+              return ChoiceChip(
+                label: Text(etiqueta),
+                selected: _estadoFiltro == estado,
+                onSelected: (_) => setState(() => _estadoFiltro = estado),
+              );
+            }).toList(),
+          ),
+        ),
+        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -183,15 +219,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
               spacing: 12,
               runSpacing: 6,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 10,
+                  runSpacing: 4,
                   children: [
-                    Icon(Icons.verified_rounded, size: 18, color: Colors.green.shade700),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Operaciones Exitosas: ${filtradas.length}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified_rounded, size: 18, color: Colors.green.shade700),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Operaciones Exitosas: $_conteoExitosas',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
+                    if (_conteoRechazadas > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Rechazadas: $_conteoRechazadas',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade800,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 Text(
@@ -308,15 +367,19 @@ class _TarjetaCompraHistorial extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final esRecarga = compra.tipoOperacion.toUpperCase() == 'RECARGA';
+    final esExitosa = compra.exitoso;
     final tituloProducto = (compra.nombreProducto != null && compra.nombreProducto!.isNotEmpty)
         ? compra.nombreProducto!
         : (esRecarga ? 'Recarga Telefónica' : 'Pago de Servicio');
+    final motivoTexto = compra.motivoRechazo ?? compra.mensaje;
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant),
+        side: BorderSide(
+          color: esExitosa ? colorScheme.outlineVariant : Colors.red.shade200,
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -327,10 +390,14 @@ class _TarjetaCompraHistorial extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: Colors.green.withValues(alpha: 0.14),
+                backgroundColor: esExitosa
+                    ? Colors.green.withValues(alpha: 0.14)
+                    : Colors.red.withValues(alpha: 0.14),
                 child: Icon(
-                  esRecarga ? Icons.phone_android_rounded : Icons.receipt_long_rounded,
-                  color: Colors.green.shade800,
+                  !esExitosa
+                      ? Icons.cancel_outlined
+                      : (esRecarga ? Icons.phone_android_rounded : Icons.receipt_long_rounded),
+                  color: esExitosa ? Colors.green.shade800 : Colors.red.shade800,
                 ),
               ),
               const SizedBox(width: 14),
@@ -358,6 +425,25 @@ class _TarjetaCompraHistorial extends StatelessWidget {
                             color: colorScheme.onSurfaceVariant,
                           ),
                     ),
+                    if (!esExitosa && motivoTexto.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Text(
+                          'Motivo: $motivoTexto',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -369,22 +455,24 @@ class _TarjetaCompraHistorial extends StatelessWidget {
                     '\$${compra.monto.toStringAsFixed(2)}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: colorScheme.primary,
+                          color: esExitosa ? colorScheme.primary : colorScheme.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.15),
+                      color: esExitosa
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : Colors.red.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'EXITOSA',
+                      esExitosa ? 'EXITOSA' : compra.estadoRaw,
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green.shade800,
+                        color: esExitosa ? Colors.green.shade800 : Colors.red.shade800,
                       ),
                     ),
                   ),

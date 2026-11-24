@@ -201,7 +201,7 @@ class ClienteValidacion {
   ClienteValidacion._();
 
   static final RegExp passwordRegex = RegExp(
-    r'^(?!.*\s)(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}$',
+    r'^(?!.*\s)(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,12}$',
   );
   static final RegExp emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$');
   static final RegExp curpRegex = RegExp(
@@ -274,7 +274,7 @@ class ClienteValidacion {
 
   static String? validarPassword(String password) {
     if (!passwordRegex.hasMatch(password)) {
-      return 'La contraseña requiere 8 a 72 caracteres sin espacios, mayúscula, minúscula, número y símbolo.';
+      return 'La contraseña requiere 8 a 12 caracteres sin espacios, mayúscula, minúscula, número y símbolo.';
     }
     return null;
   }
@@ -314,10 +314,10 @@ class ClienteValidacion {
     if (limpio.isEmpty) {
       return obligatorio ? 'El $etiqueta es obligatorio.' : null;
     }
-    if (limpio.length < 2 || limpio.length > 50) {
+    if (limpio.length < 3 || limpio.length > 50) {
       return obligatorio
-          ? 'El $etiqueta debe tener entre 2 y 50 caracteres.'
-          : 'El $etiqueta debe tener entre 2 y 50 caracteres si decides llenarlo.';
+          ? 'El $etiqueta debe tener entre 3 y 50 caracteres.'
+          : 'El $etiqueta debe tener entre 3 y 50 caracteres si decides llenarlo.';
     }
     if (!soloLetrasRegex.hasMatch(limpio)) {
       return 'El $etiqueta solo debe contener letras y espacios simples.';

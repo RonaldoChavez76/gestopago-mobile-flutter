@@ -18,6 +18,7 @@ class PurchaseTransactionResult {
     this.idServicio,
     this.nombreProducto,
     this.codigo,
+    this.motivoRechazo,
     this.idTx,
     this.numAutorizacion,
     this.comision,
@@ -41,6 +42,7 @@ class PurchaseTransactionResult {
   final EstadoCompraResultado estadoVisual;
   final String? codigo;
   final String mensaje;
+  final String? motivoRechazo;
   final String? idTx;
   final String? numAutorizacion;
   final double monto;
@@ -90,6 +92,8 @@ class PurchaseTransactionResult {
       visual = EstadoCompraResultado.errorComunicacion;
     }
 
+    final motivoRaw = json['motivoRechazo']?.toString().trim();
+
     return PurchaseTransactionResult(
       upc: (json['upc'] ?? 'SIN-UPC').toString(),
       tipoOperacion: (json['tipoOperacion'] ?? 'RECARGA').toString(),
@@ -101,6 +105,9 @@ class PurchaseTransactionResult {
       estadoVisual: visual,
       codigo: json['codigo']?.toString(),
       mensaje: (json['mensaje'] ?? 'Operación procesada').toString(),
+      motivoRechazo: visual == EstadoCompraResultado.exitosa
+          ? null
+          : (motivoRaw != null && motivoRaw.isNotEmpty ? motivoRaw : null),
       idTx: json['idTx']?.toString(),
       numAutorizacion: json['numAutorizacion']?.toString(),
       monto: montoVal,

@@ -299,11 +299,11 @@ void main() {
     );
     await tester.enterText(
       find.widgetWithText(TextField, 'Nueva contraseña *'),
-      'NuevaPass2026\$',
+      'NuevaPas26\$',
     );
     await tester.enterText(
       find.widgetWithText(TextField, 'Confirmar nueva contraseña *'),
-      'NuevaPass2026\$',
+      'NuevaPas26\$',
     );
     final btnPass = find.text('Actualizar Contraseña');
     await tester.ensureVisible(btnPass);

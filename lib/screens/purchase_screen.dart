@@ -560,12 +560,16 @@ class PurchaseResultReceiptCard extends StatelessWidget {
                     color: config.colorIcono,
                   ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              resultado.mensaje,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            if (resultado.exitoso ||
+                resultado.motivoRechazo == null ||
+                resultado.motivoRechazo != resultado.mensaje) ...[
+              const SizedBox(height: 6),
+              Text(
+                resultado.mensaje,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
@@ -579,6 +583,18 @@ class PurchaseResultReceiptCard extends StatelessWidget {
                     etiqueta: 'Estado de la operación',
                     valor: config.etiquetaCorta,
                   ),
+                  if (!resultado.exitoso && resultado.motivoRechazo != null)
+                    _FilaDetalleComprobante(
+                      etiqueta: 'Motivo específico del rechazo',
+                      valor: resultado.motivoRechazo!,
+                    ),
+                  if (!resultado.exitoso &&
+                      resultado.codigo != null &&
+                      resultado.codigo!.isNotEmpty)
+                    _FilaDetalleComprobante(
+                      etiqueta: 'Código de rechazo',
+                      valor: resultado.codigo!,
+                    ),
                   _FilaDetalleComprobante(
                     etiqueta: 'Producto adquirido',
                     valor: resultado.nombreProducto ?? 'Producto #${resultado.idProducto ?? "-"}',
