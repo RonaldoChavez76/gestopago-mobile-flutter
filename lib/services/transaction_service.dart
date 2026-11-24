@@ -137,10 +137,7 @@ class TransactionService {
     }
   }
 
-  Future<List<PurchaseTransactionResult>> obtenerHistorialComprasExitosas({
-    int? clienteId,
-    String? numeroCuenta,
-  }) async {
+  Map<String, String> _construirQueryHistorial(int? clienteId, String? numeroCuenta) {
     final queryParams = <String, String>{};
     if (clienteId != null) {
       queryParams['clienteId'] = clienteId.toString();
@@ -148,6 +145,14 @@ class TransactionService {
     if (numeroCuenta != null && numeroCuenta.trim().isNotEmpty) {
       queryParams['numeroCuenta'] = numeroCuenta.trim();
     }
+    return queryParams;
+  }
+
+  Future<List<PurchaseTransactionResult>> obtenerHistorialComprasExitosas({
+    int? clienteId,
+    String? numeroCuenta,
+  }) async {
+    final queryParams = _construirQueryHistorial(clienteId, numeroCuenta);
 
     try {
       final response = await apiClient.getJson(
@@ -187,6 +192,35 @@ class TransactionService {
           .toList();
     }
     return const <PurchaseTransactionResult>[];
+  }
+
+  Future<List<PurchaseTransactionResult>> obtenerHistorialCompleto({
+    int? clienteId,
+    String? numeroCuenta,
+  }) async {
+    final queryParams = _construirQueryHistorial(clienteId, numeroCuenta);
+
+    try {
+      final response = await apiClient.getJson(
+        '/api/gestopago/transacciones/historial/completo',
+        queryParameters: queryParams.isEmpty ? null : queryParams,
+      );
+      final data = response['data'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(PurchaseTransactionResult.fromJson)
+            .toList();
+      }
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) rethrow;
+      if (e.statusCode != 404) rethrow;
+    }
+
+    return obtenerHistorialComprasExitosas(
+      clienteId: clienteId,
+      numeroCuenta: numeroCuenta,
+    );
   }
 
   Future<PurchaseTransactionResult> consultarDetallePorUpc(String upc) async {

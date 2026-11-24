@@ -264,7 +264,7 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
       _errorGlobal = null;
     });
     try {
-      final lista = await _transactionService.obtenerHistorialComprasExitosas(
+      final lista = await _transactionService.obtenerHistorialCompleto(
         clienteId: clienteId,
         numeroCuenta: cuentaLimpia.isEmpty ? null : cuentaLimpia,
       );
@@ -1077,7 +1077,7 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Auditoría de Compras Exitosas y Folio UPC',
+                  'Auditoría de Compras y Folio UPC',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
@@ -1097,7 +1097,7 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
                   onPressed: _cargandoAuditoria ? null : _consultarAuditoriaCompras,
                   icon: const Icon(Icons.history_edu_outlined),
                   label: Text(
-                    _cargandoAuditoria ? 'Consultando...' : 'Consultar historial exitoso',
+                    _cargandoAuditoria ? 'Consultando...' : 'Consultar historial de compras',
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1123,7 +1123,7 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
         if (_auditoriaConsultada) ...[
           const SizedBox(height: 14),
           Text(
-            'Operaciones Exitosas Encontradas (${_comprasAuditadas.length})',
+            'Operaciones Encontradas (${_comprasAuditadas.length})',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -1132,7 +1132,7 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
               elevation: 0,
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: Text('No existen compras exitosas para ese cliente o cuenta.'),
+                child: Text('No existen compras registradas para ese cliente o cuenta.'),
               ),
             )
           else
@@ -1145,7 +1145,21 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
                     compra.nombreProducto ?? compra.upc,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  subtitle: Text('UPC: ${compra.upc} • ${compra.fechaMostrar}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('UPC: ${compra.upc} • ${compra.fechaMostrar}'),
+                      if (!compra.exitoso && (compra.motivoRechazo ?? compra.mensaje).isNotEmpty)
+                        Text(
+                          '${compra.estadoRaw}: ${compra.motivoRechazo ?? compra.mensaje}',
+                          style: TextStyle(
+                            color: Colors.red.shade800,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
                   trailing: Text(
                     '\$${compra.monto.toStringAsFixed(2)} MXN',
                     style: const TextStyle(fontWeight: FontWeight.bold),
@@ -1318,10 +1332,10 @@ class _AuditoriaReceiptDialogState extends State<_AuditoriaReceiptDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Detalle de Compra Exitosa',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      _detalle.exitoso ? 'Detalle de Compra Exitosa' : 'Detalle de Compra Rechazada',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                   ),
                   IconButton(
@@ -1599,7 +1613,7 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
                       maxLength: 50,
                       textCapitalization: TextCapitalization.words,
                       inputFormatters: [ValidacionFormatters.soloLetras],
-                      helperText: 'Mín. 2 letras (solo letras)',
+                      helperText: 'Mín. 3 letras (solo letras)',
                       errorText: _erroresCampos['primerNombre'],
                       onChanged: (_) => _limpiarErrorCampo('primerNombre'),
                     ),
@@ -1609,7 +1623,7 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
                       maxLength: 50,
                       textCapitalization: TextCapitalization.words,
                       inputFormatters: [ValidacionFormatters.soloLetras],
-                      helperText: 'Opcional (mín. 2 letras si aplica)',
+                      helperText: 'Opcional (mín. 3 letras si aplica)',
                       errorText: _erroresCampos['segundoNombre'],
                       onChanged: (_) => _limpiarErrorCampo('segundoNombre'),
                     ),
@@ -1619,7 +1633,7 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
                       maxLength: 50,
                       textCapitalization: TextCapitalization.words,
                       inputFormatters: [ValidacionFormatters.soloLetras],
-                      helperText: 'Mín. 2 letras (solo letras)',
+                      helperText: 'Mín. 3 letras (solo letras)',
                       errorText: _erroresCampos['apellidoPaterno'],
                       onChanged: (_) => _limpiarErrorCampo('apellidoPaterno'),
                     ),
@@ -1629,7 +1643,7 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
                       maxLength: 50,
                       textCapitalization: TextCapitalization.words,
                       inputFormatters: [ValidacionFormatters.soloLetras],
-                      helperText: 'Mín. 2 letras (solo letras)',
+                      helperText: 'Mín. 3 letras (solo letras)',
                       errorText: _erroresCampos['apellidoMaterno'],
                       onChanged: (_) => _limpiarErrorCampo('apellidoMaterno'),
                     ),
