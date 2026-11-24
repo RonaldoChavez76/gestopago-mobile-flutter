@@ -201,9 +201,9 @@ class ClienteValidacion {
   ClienteValidacion._();
 
   static final RegExp passwordRegex = RegExp(
-    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$',
+    r'^(?!.*\s)(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}$',
   );
-  static final RegExp emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+  static final RegExp emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$');
   static final RegExp curpRegex = RegExp(
     r'^[A-Z][AEIOUX][A-Z]{2}[0-9]{6}[HM][A-Z]{5}[A-Z0-9][0-9]$',
     caseSensitive: false,
@@ -212,72 +212,273 @@ class ClienteValidacion {
     r'^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$',
     caseSensitive: false,
   );
+  static final RegExp soloLetrasRegex = RegExp(
+    r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+(?: [A-Za-zÁÉÍÓÚáéíóúÑñÜü]+)*$',
+  );
+  static final RegExp ocupacionRegex = RegExp(
+    r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü.\-/]+(?: [A-Za-zÁÉÍÓÚáéíóúÑñÜü.\-/]+)*$',
+  );
+  static final RegExp empresaRegex = RegExp(
+    r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.,&\-/]+(?: [A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.,&\-/]+)*$',
+  );
+  static final RegExp calleRegex = RegExp(
+    r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.,#\-/]+(?: [A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.,#\-/]+)*$',
+  );
+  static final RegExp coloniaRegex = RegExp(
+    r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.\-]+(?: [A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9.\-]+)*$',
+  );
+  static final RegExp lugarRegex = RegExp(
+    r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü.\-]+(?: [A-Za-zÁÉÍÓÚáéíóúÑñÜü.\-]+)*$',
+  );
+  static final RegExp numeroDomicilioRegex = RegExp(r'^[A-Za-z0-9\-/]+$');
+  static final RegExp referenciaServicioRegex = RegExp(r'^[A-Za-z0-9\-]{4,40}$');
+  static final RegExp cuenta16Regex = RegExp(r'^[0-9]{16}$');
+  static final RegExp digitosRepetidos10Regex = RegExp(r'^(\d)\1{9}$');
 
-  static bool esMayorDeEdad(String fechaIso) {
+  static DateTime? parsearFechaIsoValida(String fechaIso) {
     final limpio = fechaIso.trim();
     if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(limpio)) {
-      return false;
+      return null;
     }
     final partes = limpio.split('-');
     final anio = int.tryParse(partes[0]);
     final mes = int.tryParse(partes[1]);
     final dia = int.tryParse(partes[2]);
-    if (anio == null || mes == null || dia == null) return false;
+    if (anio == null || mes == null || dia == null) return null;
     final nacimiento = DateTime(anio, mes, dia);
+    if (nacimiento.year != anio || nacimiento.month != mes || nacimiento.day != dia) {
+      return null;
+    }
+    return nacimiento;
+  }
+
+  static bool esMayorDeEdad(String fechaIso) {
+    final nacimiento = parsearFechaIsoValida(fechaIso);
+    if (nacimiento == null) return false;
     final hoy = DateTime.now();
-    final limite = DateTime(hoy.year - 18, hoy.month, hoy.day);
-    return !nacimiento.isAfter(limite);
+    final limite18 = DateTime(hoy.year - 18, hoy.month, hoy.day);
+    final limite120 = DateTime(hoy.year - 120, hoy.month, hoy.day);
+    return !nacimiento.isAfter(limite18) && !nacimiento.isBefore(limite120);
+  }
+
+  static String? validarCorreo(String correo) {
+    final limpio = correo.trim();
+    if (limpio.length < 6 || limpio.length > 100 || RegExp(r'\s').hasMatch(limpio)) {
+      return 'Ingresa un correo electrónico válido sin espacios (6 a 100 caracteres).';
+    }
+    if (!emailRegex.hasMatch(limpio)) {
+      return 'Ingresa un correo electrónico válido.';
+    }
+    return null;
+  }
+
+  static String? validarPassword(String password) {
+    if (!passwordRegex.hasMatch(password)) {
+      return 'La contraseña requiere 8 a 72 caracteres sin espacios, mayúscula, minúscula, número y símbolo.';
+    }
+    return null;
+  }
+
+  static String? validarTelefono10(String telefono) {
+    final limpio = telefono.trim();
+    if (!RegExp(r'^\d{10}$').hasMatch(limpio) || digitosRepetidos10Regex.hasMatch(limpio)) {
+      return 'El teléfono debe tener exactamente 10 dígitos numéricos válidos.';
+    }
+    return null;
+  }
+
+  static String? validarCuenta16(String cuenta) {
+    final limpio = cuenta.trim();
+    if (limpio.isEmpty) {
+      return 'Ingresa el número de cuenta bancaria.';
+    }
+    if (!cuenta16Regex.hasMatch(limpio)) {
+      return 'La cuenta bancaria debe tener exactamente 16 dígitos numéricos.';
+    }
+    return null;
+  }
+
+  static String? validarReferenciaServicio(String referencia) {
+    final limpio = referencia.trim();
+    if (limpio.isEmpty) {
+      return 'Ingresa la referencia del servicio.';
+    }
+    if (!referenciaServicioRegex.hasMatch(limpio)) {
+      return 'La referencia debe contener de 4 a 40 caracteres alfanuméricos o guión sin espacios.';
+    }
+    return null;
+  }
+
+  static String? _validarNombre(String valor, String etiqueta, {required bool obligatorio}) {
+    final limpio = valor.trim();
+    if (limpio.isEmpty) {
+      return obligatorio ? 'El $etiqueta es obligatorio.' : null;
+    }
+    if (limpio.length < 2 || limpio.length > 50) {
+      return obligatorio
+          ? 'El $etiqueta debe tener entre 2 y 50 caracteres.'
+          : 'El $etiqueta debe tener entre 2 y 50 caracteres si decides llenarlo.';
+    }
+    if (!soloLetrasRegex.hasMatch(limpio)) {
+      return 'El $etiqueta solo debe contener letras y espacios simples.';
+    }
+    return null;
+  }
+
+  static Map<String, String> validarCamposBase(ClientePerfil datos) {
+    final errores = <String, String>{};
+
+    final errPrimer = _validarNombre(datos.primerNombre, 'primer nombre', obligatorio: true);
+    if (errPrimer != null) errores['primerNombre'] = errPrimer;
+
+    final errSegundo = _validarNombre(datos.segundoNombre, 'segundo nombre', obligatorio: false);
+    if (errSegundo != null) errores['segundoNombre'] = errSegundo;
+
+    final errPaterno = _validarNombre(datos.apellidoPaterno, 'apellido paterno', obligatorio: true);
+    if (errPaterno != null) errores['apellidoPaterno'] = errPaterno;
+
+    final errMaterno = _validarNombre(datos.apellidoMaterno, 'apellido materno', obligatorio: true);
+    if (errMaterno != null) errores['apellidoMaterno'] = errMaterno;
+
+    final fechaStr = datos.fechaNacimiento.trim();
+    if (parsearFechaIsoValida(fechaStr) == null) {
+      errores['fechaNacimiento'] =
+          'La fecha de nacimiento debe ser válida y usar el formato AAAA-MM-DD.';
+    } else if (!esMayorDeEdad(fechaStr)) {
+      errores['fechaNacimiento'] = 'Debes tener entre 18 y 120 años para operar en GestoPago.';
+    }
+
+    final sexo = datos.sexo.trim();
+    if (sexo.isEmpty || sexo.length > 20 || !soloLetrasRegex.hasMatch(sexo)) {
+      errores['sexo'] = 'Ingresa un sexo válido (solo letras, máx. 20 caracteres).';
+    }
+
+    final nac = datos.nacionalidad.trim();
+    if (nac.length < 3 || nac.length > 40 || !soloLetrasRegex.hasMatch(nac)) {
+      errores['nacionalidad'] = 'La nacionalidad debe tener entre 3 y 40 letras.';
+    }
+
+    final estCiv = datos.estadoCivil.trim();
+    if (estCiv.length < 3 || estCiv.length > 30 || !soloLetrasRegex.hasMatch(estCiv)) {
+      errores['estadoCivil'] = 'El estado civil debe tener entre 3 y 30 letras.';
+    }
+
+    final errCorreo = validarCorreo(datos.correo);
+    if (errCorreo != null) {
+      errores['correo'] = errCorreo;
+    }
+
+    final errMovil = validarTelefono10(datos.telefonoMovil);
+    if (errMovil != null) {
+      errores['telefonoMovil'] = errMovil;
+    }
+
+    final alt = datos.telefonoAlternativo.trim();
+    if (alt.isNotEmpty) {
+      final errAlt = validarTelefono10(alt);
+      if (errAlt != null) {
+        errores['telefonoAlternativo'] =
+            'El teléfono alternativo debe tener 10 dígitos válidos o permanecer vacío.';
+      } else if (alt == datos.telefonoMovil.trim()) {
+        errores['telefonoAlternativo'] =
+            'El teléfono alternativo debe ser distinto al móvil principal.';
+      }
+    }
+
+    final ocupacion = datos.ocupacion.trim();
+    if (ocupacion.length < 3 || ocupacion.length > 80 || !ocupacionRegex.hasMatch(ocupacion)) {
+      errores['ocupacion'] = 'La ocupación debe tener entre 3 y 80 caracteres y no incluir números.';
+    }
+
+    final empresa = datos.empresa.trim();
+    if (empresa.length < 2 || empresa.length > 100 || !empresaRegex.hasMatch(empresa)) {
+      errores['empresa'] = 'La empresa debe tener entre 2 y 100 caracteres válidos.';
+    }
+
+    final ingresoStr = datos.ingresoMensual.trim();
+    final ingreso = double.tryParse(ingresoStr);
+    if (!RegExp(r'^[0-9]+(?:\.[0-9]{1,2})?$').hasMatch(ingresoStr) ||
+        ingreso == null ||
+        ingreso <= 0 ||
+        ingreso > 99999999.99) {
+      errores['ingresoMensual'] =
+          'El ingreso mensual debe ser positivo con máximo 2 decimales (hasta \$99,999,999.99).';
+    }
+
+    final dom = datos.domicilio;
+    final calle = dom.calle.trim();
+    if (calle.length < 3 || calle.length > 100 || !calleRegex.hasMatch(calle)) {
+      errores['domicilio.calle'] = 'La calle debe tener entre 3 y 100 caracteres válidos.';
+    }
+
+    final numExt = dom.numeroExterior.trim();
+    if (numExt.isEmpty || numExt.length > 20 || !numeroDomicilioRegex.hasMatch(numExt)) {
+      errores['domicilio.numeroExterior'] =
+          'El número exterior debe tener de 1 a 20 caracteres alfanuméricos sin espacios.';
+    }
+
+    final numInt = dom.numeroInterior.trim();
+    if (numInt.isNotEmpty && (numInt.length > 20 || !numeroDomicilioRegex.hasMatch(numInt))) {
+      errores['domicilio.numeroInterior'] =
+          'El número interior debe tener máx. 20 caracteres alfanuméricos sin espacios.';
+    }
+
+    final colonia = dom.colonia.trim();
+    if (colonia.length < 3 || colonia.length > 80 || !coloniaRegex.hasMatch(colonia)) {
+      errores['domicilio.colonia'] = 'La colonia debe tener entre 3 y 80 caracteres válidos.';
+    }
+
+    final municipio = dom.municipio.trim();
+    if (municipio.length < 3 || municipio.length > 80 || !lugarRegex.hasMatch(municipio)) {
+      errores['domicilio.municipio'] =
+          'El municipio o alcaldía debe tener entre 3 y 80 caracteres (solo letras).';
+    }
+
+    final estado = dom.estado.trim();
+    if (estado.length < 2 || estado.length > 60 || !lugarRegex.hasMatch(estado)) {
+      errores['domicilio.estado'] = 'El estado debe tener entre 2 y 60 caracteres (solo letras).';
+    }
+
+    if (!RegExp(r'^\d{5}$').hasMatch(dom.codigoPostal.trim())) {
+      errores['domicilio.codigoPostal'] =
+          'El código postal debe tener exactamente 5 dígitos numéricos sin espacios.';
+    }
+
+    final pais = dom.pais.trim();
+    if (pais.length < 3 || pais.length > 50 || !soloLetrasRegex.hasMatch(pais)) {
+      errores['domicilio.pais'] = 'El país debe tener entre 3 y 50 letras.';
+    }
+
+    return errores;
+  }
+
+  static Map<String, String> validarCamposRegistro(
+    ClientePerfil datos, {
+    required String password,
+    required String confirmarPassword,
+  }) {
+    final errores = validarCamposBase(datos);
+    if (!curpRegex.hasMatch(datos.curp.trim())) {
+      errores['curp'] =
+          'La CURP debe tener exactamente 18 caracteres del formato oficial mexicano sin espacios.';
+    }
+    if (!rfcRegex.hasMatch(datos.rfc.trim())) {
+      errores['rfc'] = 'El RFC debe tener 12 o 13 caracteres válidos sin espacios (con homoclave).';
+    }
+    final errPass = validarPassword(password);
+    if (errPass != null) {
+      errores['password'] = errPass;
+    }
+    if (confirmarPassword.isEmpty || password != confirmarPassword) {
+      errores['confirmarPassword'] = 'Las contraseñas no coinciden.';
+    }
+    return errores;
   }
 
   static String? validarDatosBase(ClientePerfil datos) {
-    if (datos.primerNombre.trim().length < 2) {
-      return 'El primer nombre debe tener al menos 2 caracteres.';
-    }
-    if (datos.segundoNombre.trim().isNotEmpty && datos.segundoNombre.trim().length < 2) {
-      return 'El segundo nombre debe tener al menos 2 caracteres si decides llenarlo.';
-    }
-    if (datos.apellidoPaterno.trim().length < 2) {
-      return 'El apellido paterno debe tener al menos 2 caracteres.';
-    }
-    if (datos.apellidoMaterno.trim().length < 2) {
-      return 'El apellido materno debe tener al menos 2 caracteres.';
-    }
-    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datos.fechaNacimiento.trim())) {
-      return 'La fecha de nacimiento debe usar el formato AAAA-MM-DD.';
-    }
-    if (!esMayorDeEdad(datos.fechaNacimiento)) {
-      return 'Debes ser mayor de 18 años para operar en GestoPago.';
-    }
-    if (!emailRegex.hasMatch(datos.correo.trim())) {
-      return 'Ingresa un correo electrónico válido.';
-    }
-    if (!RegExp(r'^\d{10}$').hasMatch(datos.telefonoMovil.trim())) {
-      return 'El teléfono móvil debe tener exactamente 10 dígitos.';
-    }
-    final alt = datos.telefonoAlternativo.trim();
-    if (alt.isNotEmpty && !RegExp(r'^\d{10}$').hasMatch(alt)) {
-      return 'El teléfono alternativo debe tener 10 dígitos o permanecer vacío.';
-    }
-    if (datos.ocupacion.trim().isEmpty || datos.empresa.trim().isEmpty) {
-      return 'Ocupación y empresa son obligatorios.';
-    }
-    final ingreso = double.tryParse(datos.ingresoMensual.trim());
-    if (ingreso == null || ingreso <= 0) {
-      return 'El ingreso mensual debe ser mayor a \$0.00.';
-    }
-    final dom = datos.domicilio;
-    if (dom.calle.trim().isEmpty ||
-        dom.numeroExterior.trim().isEmpty ||
-        dom.colonia.trim().isEmpty ||
-        dom.municipio.trim().isEmpty ||
-        dom.estado.trim().isEmpty ||
-        dom.pais.trim().isEmpty) {
-      return 'Completa los campos obligatorios del domicilio.';
-    }
-    if (!RegExp(r'^\d{5}$').hasMatch(dom.codigoPostal.trim())) {
-      return 'El código postal debe tener exactamente 5 dígitos.';
-    }
-    return null;
+    final errores = validarCamposBase(datos);
+    if (errores.isEmpty) return null;
+    return errores.values.first;
   }
 
   static String? validarRegistro(
@@ -285,20 +486,12 @@ class ClienteValidacion {
     required String password,
     required String confirmarPassword,
   }) {
-    final errBase = validarDatosBase(datos);
-    if (errBase != null) return errBase;
-    if (!curpRegex.hasMatch(datos.curp.trim())) {
-      return 'La CURP debe tener los 18 caracteres del formato oficial mexicano.';
-    }
-    if (!rfcRegex.hasMatch(datos.rfc.trim())) {
-      return 'El RFC debe tener 12 o 13 caracteres válidos (con homoclave).';
-    }
-    if (!passwordRegex.hasMatch(password)) {
-      return 'La contraseña requiere mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
-    }
-    if (password != confirmarPassword) {
-      return 'Las contraseñas no coinciden.';
-    }
-    return null;
+    final errores = validarCamposRegistro(
+      datos,
+      password: password,
+      confirmarPassword: confirmarPassword,
+    );
+    if (errores.isEmpty) return null;
+    return errores.values.first;
   }
 }

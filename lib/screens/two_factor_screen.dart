@@ -293,6 +293,9 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                           icon: Icons.pin_outlined,
                           keyboardType: TextInputType.number,
                           maxLength: 6,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                           validator: (value) {
                             final text = (value ?? '').trim();
                             if (text.isEmpty) {

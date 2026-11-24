@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/network/api_client.dart';
+import '../models/cliente_models.dart';
 import '../models/product_models.dart';
 import '../models/transaction_models.dart';
 import '../services/transaction_service.dart';
 import '../state/session_controller.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/product_logo_avatar.dart';
 
 class PurchaseScreen extends StatefulWidget {
   const PurchaseScreen({
@@ -256,16 +258,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: colorScheme.primary,
-                          child: Icon(
-                            widget.producto.esRecarga
-                                ? Icons.phone_android_rounded
-                                : Icons.receipt_long_rounded,
-                            color: colorScheme.onPrimary,
-                          ),
-                        ),
+                        ProductLogoAvatar(producto: widget.producto, size: 48),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -316,7 +309,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 label: widget.producto.esRecarga
                     ? 'Número telefónico (10 dígitos)'
                     : 'Referencia de pago del servicio',
-                hintText: widget.producto.esRecarga ? '5512345678' : 'Referencia de recibo',
+                hintText: widget.producto.esRecarga ? '5512345678' : 'Referencia sin espacios',
                 icon: widget.producto.esRecarga
                     ? Icons.phone_iphone_rounded
                     : Icons.qr_code_rounded,
@@ -324,6 +317,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                     ? TextInputType.phone
                     : TextInputType.text,
                 maxLength: widget.producto.esRecarga ? 10 : 40,
+                inputFormatters: widget.producto.esRecarga
+                    ? [FilteringTextInputFormatter.digitsOnly]
+                    : [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\-]'))],
                 validator: (val) {
                   final text = (val ?? '').trim();
                   if (text.isEmpty) {
@@ -331,13 +327,13 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                         ? 'Ingresa el número telefónico de 10 dígitos.'
                         : 'Ingresa la referencia del servicio.';
                   }
-                  if (widget.producto.esRecarga && !RegExp(r'^[0-9]{10}$').hasMatch(text)) {
-                    return 'El teléfono debe tener exactamente 10 dígitos numéricos.';
+                  if (widget.producto.esRecarga) {
+                    if (ClienteValidacion.validarTelefono10(text) != null) {
+                      return 'El teléfono debe tener exactamente 10 dígitos numéricos.';
+                    }
+                    return null;
                   }
-                  if (!widget.producto.esRecarga && text.length < 4) {
-                    return 'La referencia debe contener al menos 4 caracteres.';
-                  }
-                  return null;
+                  return ClienteValidacion.validarReferenciaServicio(text);
                 },
               ),
               const SizedBox(height: 16),
@@ -346,9 +342,15 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 label: 'Importe de la operación (MXN)',
                 icon: Icons.attach_money_rounded,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
                 validator: (val) {
-                  final parsed = double.tryParse((val ?? '').trim());
-                  if (parsed == null || parsed <= 0) {
+                  final raw = (val ?? '').trim();
+                  final parsed = double.tryParse(raw);
+                  if (!RegExp(r'^[0-9]+(?:\.[0-9]{1,2})?$').hasMatch(raw) ||
+                      parsed == null ||
+                      parsed <= 0) {
                     return 'Ingresa un monto válido mayor a \$0.00.';
                   }
                   if (precioFijo && (parsed - widget.producto.precio).abs() > 0.01) {
@@ -366,13 +368,11 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 label: 'Cuenta bancaria de cargo',
                 icon: Icons.credit_card_rounded,
                 keyboardType: TextInputType.number,
-                validator: (val) {
-                  final text = (val ?? '').trim();
-                  if (text.isEmpty) {
-                    return 'Ingresa el número de cuenta bancaria.';
-                  }
-                  return null;
-                },
+                maxLength: 16,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+                validator: (val) => ClienteValidacion.validarCuenta16(val ?? ''),
               ),
               const SizedBox(height: 16),
               LayoutBuilder(
@@ -384,6 +384,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                     icon: Icons.security_rounded,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
                     validator: (val) {
                       final text = (val ?? '').trim();
                       if (text.isEmpty) {

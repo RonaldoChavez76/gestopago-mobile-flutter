@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/config/api_config.dart';
 import '../core/network/api_client.dart';
@@ -277,15 +278,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'correo@ejemplo.com',
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
+                      maxLength: 100,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                      ],
                       validator: (value) {
                         final text = (value ?? '').trim();
                         if (text.isEmpty) {
                           return 'Ingresa tu correo electrónico.';
                         }
-                        if (!text.contains('@') || !text.contains('.')) {
-                          return 'Ingresa un correo electrónico válido.';
-                        }
-                        return null;
+                        return ClienteValidacion.validarCorreo(text);
                       },
                     ),
                     const SizedBox(height: 16),

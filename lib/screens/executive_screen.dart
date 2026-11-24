@@ -9,6 +9,8 @@ import '../services/cliente_service.dart';
 import '../services/ejecutivo_service.dart';
 import '../services/transaction_service.dart';
 import '../state/session_controller.dart';
+import '../utils/input_formatters.dart';
+import '../widgets/responsive_form_grid.dart';
 import 'purchase_screen.dart';
 
 enum _SeccionEjecutivo { clientes, cuentas, usuarios }
@@ -1394,6 +1396,15 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
 
   bool _guardando = false;
   String? _error;
+  Map<String, String> _erroresCampos = const {};
+
+  void _limpiarErrorCampo(String clave) {
+    if (_erroresCampos.containsKey(clave)) {
+      final copia = Map<String, String>.from(_erroresCampos);
+      copia.remove(clave);
+      setState(() => _erroresCampos = copia);
+    }
+  }
 
   @override
   void initState() {
@@ -1482,10 +1493,16 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
       ),
     );
 
-    final err = ClienteValidacion.validarDatosBase(perfilEditado);
-    if (err != null) {
-      setState(() => _error = err);
+    final errores = ClienteValidacion.validarCamposBase(perfilEditado);
+    if (errores.isNotEmpty) {
+      setState(() {
+        _erroresCampos = errores;
+        _error = errores.values.first;
+      });
       return;
+    }
+    if (_erroresCampos.isNotEmpty) {
+      setState(() => _erroresCampos = const {});
     }
 
     setState(() {
@@ -1517,6 +1534,11 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
     String etiqueta, {
     TextInputType? tipo,
     int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
+    String? errorText,
+    String? helperText,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    ValueChanged<String>? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -1524,8 +1546,14 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
         controller: ctrl,
         keyboardType: tipo,
         maxLength: maxLength,
+        inputFormatters: inputFormatters,
+        textCapitalization: textCapitalization,
+        onChanged: onChanged,
         decoration: InputDecoration(
           labelText: etiqueta,
+          errorText: errorText,
+          helperText: helperText,
+          errorMaxLines: 2,
           counterText: maxLength != null ? '' : null,
         ),
       ),
@@ -1540,7 +1568,7 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
         padding: const EdgeInsets.all(16),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680),
+            constraints: const BoxConstraints(maxWidth: 860),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1562,29 +1590,233 @@ class _ExecutiveClientEditScreenState extends State<_ExecutiveClientEditScreen> 
                   ),
                   const SizedBox(height: 12),
                 ],
-                _campo(_primerNombreCtrl, 'Primer nombre *'),
-                _campo(_segundoNombreCtrl, 'Segundo nombre'),
-                _campo(_apellidoPaternoCtrl, 'Apellido paterno *'),
-                _campo(_apellidoMaternoCtrl, 'Apellido materno *'),
-                _campo(_correoCtrl, 'Correo electrónico *', tipo: TextInputType.emailAddress),
-                _campo(_telefonoMovilCtrl, 'Teléfono móvil *', tipo: TextInputType.phone, maxLength: 10),
-                _campo(_telefonoAltCtrl, 'Teléfono alternativo', tipo: TextInputType.phone, maxLength: 10),
-                _campo(_fechaNacCtrl, 'Fecha de nacimiento (AAAA-MM-DD) *'),
-                _campo(_sexoCtrl, 'Sexo *'),
-                _campo(_nacionalidadCtrl, 'Nacionalidad *'),
-                _campo(_estadoCivilCtrl, 'Estado civil *'),
-                _campo(_ocupacionCtrl, 'Ocupación *'),
-                _campo(_empresaCtrl, 'Empresa *'),
-                _campo(_ingresoCtrl, 'Ingreso mensual (MXN) *', tipo: TextInputType.number),
+                ResponsiveFormGrid(
+                  runSpacing: 2,
+                  children: [
+                    _campo(
+                      _primerNombreCtrl,
+                      'Primer nombre *',
+                      maxLength: 50,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.soloLetras],
+                      helperText: 'Mín. 2 letras (solo letras)',
+                      errorText: _erroresCampos['primerNombre'],
+                      onChanged: (_) => _limpiarErrorCampo('primerNombre'),
+                    ),
+                    _campo(
+                      _segundoNombreCtrl,
+                      'Segundo nombre',
+                      maxLength: 50,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.soloLetras],
+                      helperText: 'Opcional (mín. 2 letras si aplica)',
+                      errorText: _erroresCampos['segundoNombre'],
+                      onChanged: (_) => _limpiarErrorCampo('segundoNombre'),
+                    ),
+                    _campo(
+                      _apellidoPaternoCtrl,
+                      'Apellido paterno *',
+                      maxLength: 50,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.soloLetras],
+                      helperText: 'Mín. 2 letras (solo letras)',
+                      errorText: _erroresCampos['apellidoPaterno'],
+                      onChanged: (_) => _limpiarErrorCampo('apellidoPaterno'),
+                    ),
+                    _campo(
+                      _apellidoMaternoCtrl,
+                      'Apellido materno *',
+                      maxLength: 50,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.soloLetras],
+                      helperText: 'Mín. 2 letras (solo letras)',
+                      errorText: _erroresCampos['apellidoMaterno'],
+                      onChanged: (_) => _limpiarErrorCampo('apellidoMaterno'),
+                    ),
+                    _campo(
+                      _correoCtrl,
+                      'Correo electrónico *',
+                      tipo: TextInputType.emailAddress,
+                      maxLength: 100,
+                      inputFormatters: [ValidacionFormatters.sinEspacios],
+                      helperText: 'Sin espacios (6 a 100 caracteres)',
+                      errorText: _erroresCampos['correo'],
+                      onChanged: (_) => _limpiarErrorCampo('correo'),
+                    ),
+                    _campo(
+                      _telefonoMovilCtrl,
+                      'Teléfono móvil *',
+                      tipo: TextInputType.phone,
+                      maxLength: 10,
+                      inputFormatters: [ValidacionFormatters.soloDigitos],
+                      helperText: '10 dígitos numéricos sin espacios',
+                      errorText: _erroresCampos['telefonoMovil'],
+                      onChanged: (_) => _limpiarErrorCampo('telefonoMovil'),
+                    ),
+                    _campo(
+                      _telefonoAltCtrl,
+                      'Teléfono alternativo',
+                      tipo: TextInputType.phone,
+                      maxLength: 10,
+                      inputFormatters: [ValidacionFormatters.soloDigitos],
+                      helperText: 'Opcional (10 dígitos distintos al móvil)',
+                      errorText: _erroresCampos['telefonoAlternativo'],
+                      onChanged: (_) => _limpiarErrorCampo('telefonoAlternativo'),
+                    ),
+                    _campo(
+                      _fechaNacCtrl,
+                      'Fecha de nacimiento (AAAA-MM-DD) *',
+                      tipo: TextInputType.datetime,
+                      maxLength: 10,
+                      inputFormatters: [ValidacionFormatters.fechaIso],
+                      helperText: 'Edad válida de 18 a 120 años',
+                      errorText: _erroresCampos['fechaNacimiento'],
+                      onChanged: (_) => _limpiarErrorCampo('fechaNacimiento'),
+                    ),
+                    _campo(
+                      _sexoCtrl,
+                      'Sexo *',
+                      maxLength: 20,
+                      inputFormatters: [ValidacionFormatters.soloLetras],
+                      errorText: _erroresCampos['sexo'],
+                      onChanged: (_) => _limpiarErrorCampo('sexo'),
+                    ),
+                    _campo(
+                      _nacionalidadCtrl,
+                      'Nacionalidad *',
+                      maxLength: 40,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.soloLetras],
+                      helperText: 'Mín. 3 letras',
+                      errorText: _erroresCampos['nacionalidad'],
+                      onChanged: (_) => _limpiarErrorCampo('nacionalidad'),
+                    ),
+                    _campo(
+                      _estadoCivilCtrl,
+                      'Estado civil *',
+                      maxLength: 30,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.soloLetras],
+                      helperText: 'Mín. 3 letras',
+                      errorText: _erroresCampos['estadoCivil'],
+                      onChanged: (_) => _limpiarErrorCampo('estadoCivil'),
+                    ),
+                    _campo(
+                      _ocupacionCtrl,
+                      'Ocupación *',
+                      maxLength: 80,
+                      textCapitalization: TextCapitalization.sentences,
+                      inputFormatters: [ValidacionFormatters.ocupacion],
+                      helperText: 'Mín. 3 caracteres sin números',
+                      errorText: _erroresCampos['ocupacion'],
+                      onChanged: (_) => _limpiarErrorCampo('ocupacion'),
+                    ),
+                    _campo(
+                      _empresaCtrl,
+                      'Empresa *',
+                      maxLength: 100,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.empresa],
+                      helperText: 'Mín. 2 caracteres',
+                      errorText: _erroresCampos['empresa'],
+                      onChanged: (_) => _limpiarErrorCampo('empresa'),
+                    ),
+                    _campo(
+                      _ingresoCtrl,
+                      'Ingreso mensual (MXN) *',
+                      tipo: const TextInputType.numberWithOptions(decimal: true),
+                      maxLength: 11,
+                      inputFormatters: [ValidacionFormatters.decimal],
+                      helperText: 'Mayor a 0 y máx. 2 decimales',
+                      errorText: _erroresCampos['ingresoMensual'],
+                      onChanged: (_) => _limpiarErrorCampo('ingresoMensual'),
+                    ),
+                  ],
+                ),
                 const Divider(height: 24),
-                _campo(_calleCtrl, 'Calle *'),
-                _campo(_numExtCtrl, 'Número exterior *'),
-                _campo(_numIntCtrl, 'Número interior'),
-                _campo(_coloniaCtrl, 'Colonia *'),
-                _campo(_municipioCtrl, 'Municipio *'),
-                _campo(_estadoCtrl, 'Estado *'),
-                _campo(_cpCtrl, 'Código postal *', tipo: TextInputType.number, maxLength: 5),
-                _campo(_paisCtrl, 'País *'),
+                ResponsiveFormGrid(
+                  runSpacing: 2,
+                  children: [
+                    _campo(
+                      _calleCtrl,
+                      'Calle *',
+                      maxLength: 100,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.calle],
+                      helperText: 'Mín. 3 caracteres',
+                      errorText: _erroresCampos['domicilio.calle'],
+                      onChanged: (_) => _limpiarErrorCampo('domicilio.calle'),
+                    ),
+                    _campo(
+                      _numExtCtrl,
+                      'Número exterior *',
+                      maxLength: 20,
+                      inputFormatters: [ValidacionFormatters.numeroDomicilio],
+                      helperText: '1 a 20 caracteres sin espacios',
+                      errorText: _erroresCampos['domicilio.numeroExterior'],
+                      onChanged: (_) => _limpiarErrorCampo('domicilio.numeroExterior'),
+                    ),
+                    _campo(
+                      _numIntCtrl,
+                      'Número interior',
+                      maxLength: 20,
+                      inputFormatters: [ValidacionFormatters.numeroDomicilio],
+                      helperText: 'Opcional, sin espacios',
+                      errorText: _erroresCampos['domicilio.numeroInterior'],
+                      onChanged: (_) => _limpiarErrorCampo('domicilio.numeroInterior'),
+                    ),
+                    _campo(
+                      _coloniaCtrl,
+                      'Colonia *',
+                      maxLength: 80,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.colonia],
+                      helperText: 'Mín. 3 caracteres',
+                      errorText: _erroresCampos['domicilio.colonia'],
+                      onChanged: (_) => _limpiarErrorCampo('domicilio.colonia'),
+                    ),
+                    _campo(
+                      _municipioCtrl,
+                      'Municipio *',
+                      maxLength: 80,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.lugar],
+                      helperText: 'Mín. 3 letras',
+                      errorText: _erroresCampos['domicilio.municipio'],
+                      onChanged: (_) => _limpiarErrorCampo('domicilio.municipio'),
+                    ),
+                    _campo(
+                      _estadoCtrl,
+                      'Estado *',
+                      maxLength: 60,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.lugar],
+                      helperText: 'Mín. 2 letras',
+                      errorText: _erroresCampos['domicilio.estado'],
+                      onChanged: (_) => _limpiarErrorCampo('domicilio.estado'),
+                    ),
+                    _campo(
+                      _cpCtrl,
+                      'Código postal *',
+                      tipo: TextInputType.number,
+                      maxLength: 5,
+                      inputFormatters: [ValidacionFormatters.soloDigitos],
+                      helperText: '5 dígitos exactos',
+                      errorText: _erroresCampos['domicilio.codigoPostal'],
+                      onChanged: (_) => _limpiarErrorCampo('domicilio.codigoPostal'),
+                    ),
+                    _campo(
+                      _paisCtrl,
+                      'País *',
+                      maxLength: 50,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [ValidacionFormatters.soloLetras],
+                      helperText: 'Mín. 3 letras',
+                      errorText: _erroresCampos['domicilio.pais'],
+                      onChanged: (_) => _limpiarErrorCampo('domicilio.pais'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: _guardando ? null : _guardar,
